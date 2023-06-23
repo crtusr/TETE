@@ -26,12 +26,17 @@ def show_main_menu():
     global app # Usar la variable global app que contiene la instancia de la clase principal
     # Crear un diccionario con las opciones y sus funciones asociadas
     options = {
-        "1. Ingresar datos": ingresar_datos,
-        "2. Consultar datos": consultar_datos,
-        "3. Modificar datos": modificar_datos,
-        "4. Eliminar datos": eliminar_datos,
-        "5. Salir": salir
-    }
+    "1. Clientes": clientes,
+    "2. Stock": stock,
+    "3. Facturación": facturacion,
+    "4. Compras": compras,
+    "5. Ctas.ctes.": ctas_ctes,
+    "6. Parámetros": parametros,
+    "7. Nota de crédito": nota_credito,
+    "8. Remito": remito,
+    "9. Registro de cheques": registro_cheques,
+    "10. DOS": dos
+}
     # Crear un frame para contener los widgets del menú principal
     main_frame = tk.Frame(app, bg=COLOR)
     main_frame.pack(fill=tk.BOTH, expand=True) # Empaquetar el frame en la ventana principal
@@ -45,23 +50,36 @@ def show_main_menu():
         option_button.pack(pady=10) # Empaquetar el button en el frame principal
 
 # Crear las funciones que correspondan a cada opción del menú principal (aquí solo pongo los nombres y comentarios)
-def ingresar_datos():
-    # Esta función debe permitir ingresar nuevos datos al sistema y guardarlos en la base de datos
+def clientes():
+    # Esta función debe permitir gestionar la ficha de clientes, usando widgets como cuadros de texto, etiquetas, botones, etc.
     pass
 
-def consultar_datos():
-    # Esta función debe permitir consultar los datos existentes en el sistema y mostrarlos en la ventana
+def stock():
+    # Esta función debe permitir gestionar el stock de mercadería, usando widgets como listas, tablas, gráficos, etc.
     pass
 
-def modificar_datos():
-    # Esta función debe permitir modificar los datos existentes en el sistema y actualizarlos en la base de datos
+def facturacion():
+    pass
+    
+def compras():
     pass
 
-def eliminar_datos():
-    # Esta función debe permitir eliminar los datos existentes en el sistema y borrarlos de la base de datos
+def ctas_ctes():
+    pass
+    
+def parametros():
     pass
 
-def salir():
+def nota_credito():
+    pass
+
+def remito():
+    pass
+
+def registro_cheques():
+    pass
+
+def DOS():
     # Esta función debe cerrar la ventana principal y terminar el programa
     global app # Usar la variable global app que contiene la instancia de la clase principal
     app.destroy() # Destruir la ventana principal
