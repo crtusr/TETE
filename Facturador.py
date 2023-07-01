@@ -1,6 +1,12 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from dbfread import DBF
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4, A6
+from reportlab.lib.units import cm
+import os
+
+
 
 window = tk.Tk()
 
@@ -47,16 +53,66 @@ def agregar_producto():
         calcular_total()
         producto_entry.delete(0, tk.END)
         cantidad_entry.delete(0, tk.END)
+        tamaño_entry.delete(0, tk.END)
     except ValueError:
         messagebox.showerror("Error", "Por favor, introduce un número válido")
 
 def calcular_total():
     total = 0.0
     for child in factura_treeview.get_children():
-        total += float(factura_treeview.item(child, 'values')[3])
+        total += float(factura_treeview.item(child, 'values')[4])
     total_label.config(text=f"Total: {total}")
 
-stock = DBF('C:\\Users\\OEM\\Desktop\\CLIPPER TEST\\Python\\STOCK1.DBF', encoding='ANSI')
+import subprocess
+
+def create_and_print_invoice():
+    # Crear un nuevo PDF con el tamaño de página A4
+    c = canvas.Canvas("boleta.pdf", pagesize=A4)
+
+    # Calcular los márgenes para centrar el A6 dentro del A4
+    top_margin = A4[1] - A6[1]  # Margen superior para alinear con el borde de A4
+    left_margin = (A4[0] - A6[0]) / 2  # Margen izquierdo para centrar
+
+    # Configurar la fuente
+    c.setFont("Helvetica", 11)
+
+    # Extraer los datos del Treeview e imprimirlos en el PDF
+    y = A6[1] + 400
+    for row in factura_treeview.get_children():
+        # Obtener los valores de la fila
+        values = factura_treeview.item(row, 'values')
+
+        # Imprimir los valores en el PDF
+        c.drawString(left_margin + 10, y, str(values[0]))  # Producto
+        c.drawRightString(left_margin + 150, y, str(values[1]))  # Cantidad
+        c.drawRightString(left_margin + 200, y, str(values[2]))  # Precio
+        c.drawRightString(left_margin + 250, y, str(values[3]))  # Total
+        c.drawRightString(left_margin + 300, y, str(values[4]))  # Total
+
+        # Mover la posición y hacia abajo para la siguiente fila
+        y -= 20
+
+    # Imprimir el total
+    total = total_label.cget("text")  # Obtener el texto del total
+    c.drawString(left_margin + 10, y, total)
+
+    # Finalizar y guardar el PDF
+    c.save()
+
+    # Abrir el PDF con el lector de PDF predeterminado
+    subprocess.Popen(["boleta.pdf"], shell=True)
+    
+    # Imprimir el PDF
+    # os.startfile("boleta.pdf", "print")
+
+
+import os
+from dbfread import DBF
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+dbf_file = os.path.join(current_dir, 'STOCK1.DBF')
+
+stock = DBF(dbf_file, encoding='ANSI')
 
 cliente_label = tk.Label(window, text="Nombre del Cliente")
 cliente_label.pack()
@@ -81,9 +137,7 @@ def on_product_selection(event):
     for row in stock:
         if row['NOMBRE'] == selected_product:
             PRECIOB_var.set(row['PRECIOB'])
-            break
-            tamaño_entry.delete(0, tk.END)  # Elimina el valor actual
-            tamaño_entry.insert(0, row['ENVASE'])  # Inserta el nuevo valor
+            TAMAÑO_var.set(row['ENVASE'])
             break
 
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
@@ -112,5 +166,8 @@ factura_treeview.pack()
 
 total_label = tk.Label(window, text="Total: 0")
 total_label.pack()
+
+print_button = tk.Button(window, text="Imprimir boleta", command=create_and_print_invoice)
+print_button.pack()
 
 window.mainloop()
