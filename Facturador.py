@@ -85,9 +85,9 @@ def create_and_print_invoice():
         # Imprimir los valores en el PDF
         c.drawString(left_margin + 10, y, str(values[0]))  # Producto
         c.drawRightString(left_margin + 150, y, str(values[1]))  # Cantidad
-        c.drawRightString(left_margin + 200, y, str(values[2]))  # Precio
-        c.drawRightString(left_margin + 250, y, str(values[3]))  # Total
-        c.drawRightString(left_margin + 300, y, str(values[4]))  # Total
+        c.drawRightString(left_margin + 190, y, str(values[2]))  # Precio
+        c.drawRightString(left_margin + 230, y, str(values[3]))  # Total
+        c.drawRightString(left_margin + 280, y, str(values[4]))  # Total
 
         # Mover la posición y hacia abajo para la siguiente fila
         y -= 20
