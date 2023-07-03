@@ -28,6 +28,14 @@ def autocomplete(event=None):
             PRECIOB_var.set(suggestions_sorted[0]['PRECIOB'])  # Actualiza el valor de PRECIOB_var
             TAMAÑO_var.set(suggestions_sorted[0]['ENVASE'])  # Actualiza el valor de PRECIOB_var
 
+    cli_text = cliente_entry.get().lower()
+    suggestions2 = [row for row in clipro if row['RAZON'].lower().startswith(cli_text)]
+    if suggestions2:
+        cliente_entry.set('')  # Limpia el contenido actual
+        suggestions2_sorted = sorted(suggestions2, key=lambda row: row['RAZON'])  # Ordena las sugerencias en orden alfabético
+        cliente_entry['values'] = [row['RAZON'] for row in suggestions2_sorted]  # Configura los nuevos valores
+        cliente_entry.set(suggestions2_sorted[0]['RAZON'])  # Configura el primer valor sugerido como el valor actual
+
 
 def robust_decode(bs):
     '''Intenta decodificar una cadena de bytes utilizando varias codificaciones.'''
@@ -83,7 +91,7 @@ def create_and_print_invoice():
         values = factura_treeview.item(row, 'values')
 
         # Imprimir los valores en el PDF
-        c.drawString(left_margin + 10, y, str(values[0]))  # Producto
+        c.drawString(left_margin + 10, y, str(values[0]))       # Producto
         c.drawRightString(left_margin + 150, y, str(values[1]))  # Cantidad
         c.drawRightString(left_margin + 190, y, str(values[2]))  # Precio
         c.drawRightString(left_margin + 230, y, str(values[3]))  # Total
@@ -114,9 +122,18 @@ dbf_file = os.path.join(current_dir, 'STOCK1.DBF')
 
 stock = DBF(dbf_file, encoding='ANSI')
 
+ # Abrir y leer el archivo CLIPRO.DBF
+dbf_file2 = os.path.join(current_dir, 'CLIPRO.DBF')
+clipro = DBF(dbf_file2, encoding='ANSI')
+
+
+# Abrir y leer el archivo PROVE.DBF
+dbf_file3 = os.path.join(current_dir, 'PROVE.DBF')
+prove = DBF(dbf_file3, encoding='ANSI')
+
 cliente_label = tk.Label(window, text="Nombre del Cliente")
 cliente_label.pack()
-cliente_entry = tk.Entry(window)
+cliente_entry = ttk.Combobox(window, postcommand=autocomplete)
 cliente_entry.pack()
 
 producto_label = tk.Label(window, text="Producto")
