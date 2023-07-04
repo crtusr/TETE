@@ -58,6 +58,7 @@ def robust_decode(bs):
 
 def agregar_producto():
     try:
+        global precio
         producto = producto_entry.get()
         cantidad = float(cantidad_entry.get())
         producto = producto_entry.get()
@@ -172,6 +173,7 @@ tamaño_entry = tk.Entry(window, textvariable=TAMAÑO_var)
 tamaño_entry.grid(row=5, column=3)
 
 def on_product_selection(event):
+    global precio
     # Obtiene el producto seleccionado
     selected_product = producto_entry.get()
 
