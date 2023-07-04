@@ -15,12 +15,12 @@ window.title("Facturador")
 
 PRECIOB_var = tk.StringVar()
 TAMAÑO_var = tk.StringVar()
-
 numero_var = tk.StringVar()
 acreedor_var = tk.StringVar()
 deudor_var = tk.StringVar()
 acreedor_deudor_var = tk.StringVar()
-
+existencias_var = tk.StringVar()
+codigo_var = tk.StringVar()
 
 def autocomplete(event=None):
     current_text = producto_entry.get().lower()  # Convierte el texto de entrada a minúsculas
@@ -28,8 +28,15 @@ def autocomplete(event=None):
     if suggestions:
         producto_entry.set('')  # Limpia el contenido actual
         suggestions_sorted = sorted(suggestions, key=lambda row: row['NOMBRE'])  # Ordena las sugerencias en orden alfabético
-        producto_entry['values'] = [row['NOMBRE'] for row in suggestions_sorted]  # Configura los nuevos valores
-        producto_entry.set(suggestions_sorted[0]['NOMBRE'])  # Configura el primer valor sugerido como el valor actual
+        
+        # Concatenar el nombre y el tamaño en las sugerencias
+        suggestions_with_size = [f"{row['NOMBRE']} {row['ENVASE']}" for row in suggestions_sorted]
+        
+        producto_entry['values'] = suggestions_with_size  # Configura los nuevos valores
+        producto_entry.set(suggestions_with_size[0])  # Configura la primera sugerencia como el valor actual
+
+    # Llama a la función autocomplete para que se ejecute cuando haya cambios en el widget
+    producto_entry.bind('<KeyRelease>', autocomplete)
 
     cli_text = cliente_entry.get().lower()
     suggestions2 = [row for row in clipro if row['RAZON'].lower().startswith(cli_text)]
@@ -85,7 +92,7 @@ def create_and_print_invoice():
     left_margin = (A4[0] - A6[0]) / 2  # Margen izquierdo para centrar
 
     # Configurar la fuente
-    c.setFont("Helvetica", 11)
+    c.setFont("Helvetica", 9)
 
     # Extraer los datos del Treeview e imprimirlos en el PDF
     y = A6[1] + 400
@@ -139,13 +146,25 @@ cliente_label.grid(row=0, column=3)
 cliente_entry = ttk.Combobox(window, postcommand=autocomplete)
 cliente_entry.grid(row=1, column=3)
 
-numero_entry = ttk.Combobox(window, textvariable=numero_var)
+numero_label = tk.Label(window, text="numero de cliente")
+numero_label.grid(row=0, column=3)
+numero_entry = tk.Entry(window, textvariable=numero_var)
 numero_entry.grid(row=1, column=2)
+
+codi_label = tk.Label(window, text="codigo")
+codi_label.grid(row=2, column=1)
+codi_entry = ttk.Combobox(window, textvariable=codigo_var)
+codi_entry.grid(row=3, column=1)
 
 producto_label = tk.Label(window, text="Producto")
 producto_label.grid(row=2, column=3)
 producto_entry = ttk.Combobox(window, postcommand=autocomplete, width=50)
-producto_entry.grid(row=3, column=3)
+producto_entry.grid(row=3, column=2, columnspan=3)
+
+existencia_label = tk.Label(window, text="Stock")
+existencia_label.grid(row=4, column=2)
+existencia_entry = tk.Entry(window, textvariable=existencias_var)
+existencia_entry.grid(row=5, column=2)
 
 tamaño_label = tk.Label(window, text="Tamaño")
 tamaño_label.grid(row=4, column=3)
@@ -156,11 +175,15 @@ def on_product_selection(event):
     # Obtiene el producto seleccionado
     selected_product = producto_entry.get()
 
+    # Divide la cadena seleccionada en el nombre del producto y su tamaño
+    selected_name, selected_size = selected_product.split(' ', 1)
+
     # Busca el producto seleccionado en el stock y actualiza el precio
     for row in stock:
-        if row['NOMBRE'] == selected_product:
+        if row['NOMBRE'] == selected_name and row['ENVASE'] == selected_size:
             PRECIOB_var.set(row['PRECIOB'])
-            TAMAÑO_var.set(row['ENVASE'])
+            codigo_var.set(row['CODIGO'])
+            existencias_var.set(row['EXISTENCIA'])
             break
         
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
@@ -172,10 +195,12 @@ cantidad_entry = tk.Entry(window)
 cantidad_entry.grid(row=7, column=3)
 
 precio_label = tk.Label(window, text="Precio por unidad")
-precio_label.grid(row=8, column=3)
+precio_label.grid(row=4, column=4)
 precio_entry = tk.Entry(window, textvariable=PRECIOB_var)
-precio_entry.grid(row=9, column=3)
+precio_entry.grid(row=5, column=4)
 
+acreedor_deudor_label = tk.Label(window, text="Saldo")
+acreedor_deudor_label.grid(row=9, column=4)
 acreedor_deudor_entry = tk.Entry(window, textvariable=acreedor_deudor_var)
 acreedor_deudor_entry.grid(row=10, column=4)
 
