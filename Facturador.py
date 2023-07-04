@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkinter import Grid
 from dbfread import DBF
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4, A6
@@ -15,6 +16,12 @@ window.title("Facturador")
 PRECIOB_var = tk.StringVar()
 TAMAÑO_var = tk.StringVar()
 
+numero_var = tk.StringVar()
+acreedor_var = tk.StringVar()
+deudor_var = tk.StringVar()
+acreedor_deudor_var = tk.StringVar()
+
+
 def autocomplete(event=None):
     current_text = producto_entry.get().lower()  # Convierte el texto de entrada a minúsculas
     suggestions = [row for row in stock if row['NOMBRE'].lower().startswith(current_text)]  # Convierte los nombres de los productos a minúsculas antes de hacer la comparación
@@ -23,10 +30,6 @@ def autocomplete(event=None):
         suggestions_sorted = sorted(suggestions, key=lambda row: row['NOMBRE'])  # Ordena las sugerencias en orden alfabético
         producto_entry['values'] = [row['NOMBRE'] for row in suggestions_sorted]  # Configura los nuevos valores
         producto_entry.set(suggestions_sorted[0]['NOMBRE'])  # Configura el primer valor sugerido como el valor actual
-
-        if isinstance(suggestions_sorted[0], dict):  # Verifica si el primer elemento es un diccionario
-            PRECIOB_var.set(suggestions_sorted[0]['PRECIOB'])  # Actualiza el valor de PRECIOB_var
-            TAMAÑO_var.set(suggestions_sorted[0]['ENVASE'])  # Actualiza el valor de PRECIOB_var
 
     cli_text = cliente_entry.get().lower()
     suggestions2 = [row for row in clipro if row['RAZON'].lower().startswith(cli_text)]
@@ -132,19 +135,22 @@ dbf_file3 = os.path.join(current_dir, 'PROVE.DBF')
 prove = DBF(dbf_file3, encoding='ANSI')
 
 cliente_label = tk.Label(window, text="Nombre del Cliente")
-cliente_label.pack()
+cliente_label.grid(row=0, column=3)
 cliente_entry = ttk.Combobox(window, postcommand=autocomplete)
-cliente_entry.pack()
+cliente_entry.grid(row=1, column=3)
+
+numero_entry = ttk.Combobox(window, textvariable=numero_var)
+numero_entry.grid(row=1, column=2)
 
 producto_label = tk.Label(window, text="Producto")
-producto_label.pack()
-producto_entry = ttk.Combobox(window, postcommand=autocomplete)
-producto_entry.pack()
+producto_label.grid(row=2, column=3)
+producto_entry = ttk.Combobox(window, postcommand=autocomplete, width=50)
+producto_entry.grid(row=3, column=3)
 
 tamaño_label = tk.Label(window, text="Tamaño")
-tamaño_label.pack()
+tamaño_label.grid(row=4, column=3)
 tamaño_entry = tk.Entry(window, textvariable=TAMAÑO_var)
-tamaño_entry.pack()
+tamaño_entry.grid(row=5, column=3)
 
 def on_product_selection(event):
     # Obtiene el producto seleccionado
@@ -156,22 +162,41 @@ def on_product_selection(event):
             PRECIOB_var.set(row['PRECIOB'])
             TAMAÑO_var.set(row['ENVASE'])
             break
-
+        
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
 producto_entry.bind('<<ComboboxSelected>>', on_product_selection)
 
 cantidad_label = tk.Label(window, text="Cantidad")
-cantidad_label.pack()
+cantidad_label.grid(row=6, column=3)
 cantidad_entry = tk.Entry(window)
-cantidad_entry.pack()
+cantidad_entry.grid(row=7, column=3)
 
 precio_label = tk.Label(window, text="Precio por unidad")
-precio_label.pack()
+precio_label.grid(row=8, column=3)
 precio_entry = tk.Entry(window, textvariable=PRECIOB_var)
-precio_entry.pack()
+precio_entry.grid(row=9, column=3)
+
+acreedor_deudor_entry = tk.Entry(window, textvariable=acreedor_deudor_var)
+acreedor_deudor_entry.grid(row=10, column=4)
+
+def on_client_selection(event):
+    # Obtiene el producto seleccionado
+    selected_client = cliente_entry.get()
+
+    # Busca el producto seleccionado en el stock y actualiza el precio
+    for row in clipro:
+        if row['RAZON'] == selected_client:
+            numero_var.set(row['NUMERO'])
+            acreedor_var.set(row['ACREEDOR'])
+            deudor_var.set(row['DEUDOR'])
+            acreedor_deudor_var.set(float(acreedor_var.get()) - float(deudor_var.get()))
+            break
+        
+# Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
+cliente_entry.bind('<<ComboboxSelected>>', on_client_selection)
 
 agregar_button = tk.Button(window, text="Agregar producto", command=agregar_producto)
-agregar_button.pack()
+agregar_button.grid(row=10, column=3)
 
 factura_treeview = ttk.Treeview(window, columns=('Producto', 'Tamaño', 'Cantidad', 'Precio', 'Total'), show='headings')
 factura_treeview.heading('Producto', text='Producto')
@@ -179,12 +204,12 @@ factura_treeview.heading('Tamaño', text='Tamaño')
 factura_treeview.heading('Cantidad', text='Cantidad')
 factura_treeview.heading('Precio', text='Precio')
 factura_treeview.heading('Total', text='Total')
-factura_treeview.pack()
+factura_treeview.grid(row=11, column=0, columnspan=6)
 
 total_label = tk.Label(window, text="Total: 0")
-total_label.pack()
+total_label.grid(row=12, column=3)
 
 print_button = tk.Button(window, text="Imprimir boleta", command=create_and_print_invoice)
-print_button.pack()
+print_button.grid(row=13, column=5)
 
 window.mainloop()
