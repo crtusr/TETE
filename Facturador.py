@@ -63,10 +63,7 @@ def agregar_producto():
         cantidad = float(cantidad_entry.get())
         producto = producto_entry.get()
         tamaño = tamaño_entry.get()  # Obtén el valor de tamaño_entry
-        for row in stock:
-            if row['NOMBRE'] == producto:
-                precio = float(row['PRECIOB'])
-                break
+        precio = [row['PRECIOB'] for row in stock if f"{row['NOMBRE']} {row['ENVASE']}" == producto][0]
         total_producto = cantidad * precio
         factura_treeview.insert('', 'end', values=(producto, tamaño, cantidad, precio, total_producto))
         calcular_total()
