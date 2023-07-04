@@ -30,7 +30,7 @@ def autocomplete(event=None):
         suggestions_sorted = sorted(suggestions, key=lambda row: row['NOMBRE'])  # Ordena las sugerencias en orden alfabético
         
         # Concatenar el nombre y el tamaño en las sugerencias
-        suggestions_with_size = [f"{row['NOMBRE']} {row['ENVASE']}" for row in suggestions_sorted]
+        suggestions_with_size = [f"{row['NOMBRE']}--{row['ENVASE']}" for row in suggestions_sorted]
         
         producto_entry['values'] = suggestions_with_size  # Configura los nuevos valores
         producto_entry.set(suggestions_with_size[0])  # Configura la primera sugerencia como el valor actual
@@ -63,7 +63,7 @@ def agregar_producto():
         cantidad = float(cantidad_entry.get())
         producto = producto_entry.get()
         tamaño = tamaño_entry.get()  # Obtén el valor de tamaño_entry
-        precio = [row['PRECIOB'] for row in stock if f"{row['NOMBRE']} {row['ENVASE']}" == producto][0]
+        precio = [row['PRECIOB'] for row in stock if f"{row['NOMBRE']}--{row['ENVASE']}" == producto][0]
         total_producto = cantidad * precio
         factura_treeview.insert('', 'end', values=(producto, tamaño, cantidad, precio, total_producto))
         calcular_total()
@@ -175,7 +175,7 @@ def on_product_selection(event):
     selected_product = producto_entry.get()
 
     # Divide la cadena seleccionada en el nombre del producto y su tamaño
-    selected_name, selected_size = selected_product.split(' ', 1)
+    selected_name, selected_size = selected_product.split('--', 1)
 
     # Busca el producto seleccionado en el stock y actualiza el precio
     for row in stock:
@@ -183,6 +183,7 @@ def on_product_selection(event):
             PRECIOB_var.set(row['PRECIOB'])
             codigo_var.set(row['CODIGO'])
             existencias_var.set(row['EXISTENCIA'])
+            TAMAÑO_var.set(row['ENVASE'])
             break
         
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
