@@ -1,0 +1,57 @@
+Entiendo que quieres mostrar sugerencias en vez de llamar a la función `autocomplete` cuando se libera una tecla. Para lograr esto, puedes utilizar un `Listbox` para mostrar las sugerencias. En lugar de establecer el valor del entry, puedes actualizar el `Listbox` con las sugerencias correspondientes.
+
+Usando el ejemplo de [Source 0](https://www.geeksforgeeks.org/autocmplete-combobox-in-python-tkinter/), puedes realizar los siguientes cambios en tu código:
+
+Primero, crea un `Listbox`:
+
+```python
+suggestions_box = Listbox(root)
+suggestions_box.pack()
+```
+
+Luego, en lugar de establecer el valor de `producto_entry` en `autocomplete`, actualiza `suggestions_box`:
+
+```python
+def autocomplete(event=None):
+    current_text = producto_entry.get().lower()
+    suggestions = [row for row in stock if row['NOMBRE'].lower().startswith(current_text)]
+    if suggestions:
+        suggestions_box.delete(0, 'end')  # Limpia las sugerencias actuales
+        suggestions_sorted = sorted(suggestions, key=lambda row: row['NOMBRE'])
+        suggestions_with_size = [f"{row['NOMBRE']}--{row['ENVASE']}" for row in suggestions_sorted]
+        for suggestion in suggestions_with_size:
+            suggestions_box.insert('end', suggestion)  # Agrega la sugerencia al Listbox
+```
+
+Si deseas que el usuario pueda seguir escribiendo después de que se haya llenado la palabra, puedes usar el enfoque presentado en [Source 1](https://stackoverflow.com/questions/58428545/clarify-functionality-of-tkinter-autocomplete-entry):
+
+```python
+def get_typed(event):
+    if len(event.keysym) == 1:
+        hits = match_string()
+        show_hit(hits)
+
+def show_hit(lst):
+    if len(lst) == 1:
+        producto_entry.set(lst[0])
+        detect_pressed.filled = True
+
+def detect_pressed(event):    
+    key = event.keysym
+    if len(key) == 1 and detect_pressed.filled is True:
+        pos = producto_entry.index(tk.INSERT)
+        producto_entry.delete(pos, tk.END)
+
+detect_pressed.filled = False
+```
+
+Aquí, `get_typed` es similar a tu función `autocomplete`, `show_hit` establece el valor de `producto_entry` si solo hay una coincidencia, y `detect_pressed` borra el texto autocompletado si el usuario sigue escribiendo.
+
+Finalmente, vincula los eventos `<KeyRelease>` y `<Key>` a `get_typed` y `detect_pressed`, respectivamente:
+
+```python
+producto_entry.bind('<KeyRelease>', get_typed)
+producto_entry.bind('<Key>', detect_pressed)
+```
+
+Con estos cambios, deberías poder mostrar sugerencias en un `Listbox` cuando se libera una tecla, y permitir que el usuario siga escribiendo después de que se haya llenado la palabra.
