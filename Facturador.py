@@ -36,7 +36,7 @@ def autocomplete(event=None):
         producto_entry.set(suggestions_with_size[0])  # Configura la primera sugerencia como el valor actual
 
     # Llama a la función autocomplete para que se ejecute cuando haya cambios en el widget
-    producto_entry.bind('<KeyRelease>', autocomplete)
+    #producto_entry.bind('<KeyRelease>', autocomplete)
 
     cli_text = cliente_entry.get().lower()
     suggestions2 = [row for row in clipro if row['RAZON'].lower().startswith(cli_text)]
@@ -63,8 +63,8 @@ def agregar_producto():
         cantidad = float(cantidad_entry.get())
         producto = producto_entry.get()
         tamaño = tamaño_entry.get()  # Obtén el valor de tamaño_entry
-        precio = [row['PRECIOB'] for row in stock if f"{row['NOMBRE']}--{row['ENVASE']}" == producto][0]
-        total_producto = cantidad * precio
+        precio = float(precio_entry.get())
+        total_producto = float(cantidad) * float(precio)
         factura_treeview.insert('', 'end', values=(producto, tamaño, cantidad, precio, total_producto))
         calcular_total()
         producto_entry.delete(0, tk.END)
@@ -94,15 +94,26 @@ def create_and_print_invoice():
 
     # Extraer los datos del Treeview e imprimirlos en el PDF
     y = A6[1] + 400
+
+    c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
+
+    y -= 20
+
+    c.drawString(left_margin + 10, y, "Descripción")       # Producto
+    c.drawRightString(left_margin + 190, y, "Cantidad")  # Precio
+    c.drawRightString(left_margin + 230, y, "Precio")  # Total
+    c.drawRightString(left_margin + 280, y, "Total")  # Total
+
+    y -= 20
+        
     for row in factura_treeview.get_children():
         # Obtener los valores de la fila
         values = factura_treeview.item(row, 'values')
 
         # Imprimir los valores en el PDF
         c.drawString(left_margin + 10, y, str(values[0]))       # Producto
-        c.drawRightString(left_margin + 150, y, str(values[1]))  # Cantidad
-        c.drawRightString(left_margin + 190, y, str(values[2]))  # Precio
-        c.drawRightString(left_margin + 230, y, str(values[3]))  # Total
+        c.drawRightString(left_margin + 190, y, str(values[2]))  # Cantidad
+        c.drawRightString(left_margin + 230, y, str(values[3]))  # Precio
         c.drawRightString(left_margin + 280, y, str(values[4]))  # Total
 
         # Mover la posición y hacia abajo para la siguiente fila
@@ -110,7 +121,7 @@ def create_and_print_invoice():
 
     # Imprimir el total
     total = total_label.cget("text")  # Obtener el texto del total
-    c.drawString(left_margin + 10, y, total)
+    c.drawRightString(left_margin + 280, y, total)
 
     # Finalizar y guardar el PDF
     c.save()
