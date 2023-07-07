@@ -5,6 +5,7 @@ from dbfread import DBF
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4, A6
 from reportlab.lib.units import cm
+import math
 import os
 
 
@@ -14,6 +15,7 @@ window = tk.Tk()
 window.title("Facturador")
 
 PRECIOB_var = tk.StringVar()
+precio_bonificado_var = tk.IntVar()
 TAMAÑO_var = tk.StringVar()
 numero_var = tk.StringVar()
 acreedor_var = tk.StringVar()
@@ -21,6 +23,13 @@ deudor_var = tk.StringVar()
 acreedor_deudor_var = tk.StringVar()
 existencias_var = tk.StringVar()
 codigo_var = tk.StringVar()
+
+def update_price(*args):
+    if var.get():
+        # Aumenta el precio en un 30% y redondea hacia arriba a las decenas más cercanas
+        new_price = math.ceil((float(precio_entry.get()) * 1.3) / 10.0) * 10
+        precio_entry.delete(0, tk.END)
+        precio_entry.insert(0, str(new_price))
 
 def autocomplete(event=None):
     current_text = producto_entry.get().lower()  # Convierte el texto de entrada a minúsculas
@@ -77,7 +86,7 @@ def calcular_total():
     total = 0.0
     for child in factura_treeview.get_children():
         total += float(factura_treeview.item(child, 'values')[4])
-    total_label.config(text=f"Total: {total}")
+    total_label.config(text=f"Subtotal: {total}")
 
 import subprocess
 
@@ -122,6 +131,11 @@ def create_and_print_invoice():
     # Imprimir el total
     total = total_label.cget("text")  # Obtener el texto del total
     c.drawRightString(left_margin + 280, y, total)
+
+    y -= 20
+    
+    saldo = acreedor_deudor_var.get()  # Obtener el texto del total
+    c.drawRightString(left_margin + 280, y, "Saldo: " + saldo)
 
     # Finalizar y guardar el PDF
     c.save()
@@ -180,8 +194,10 @@ tamaño_label.grid(row=4, column=3)
 tamaño_entry = tk.Entry(window, textvariable=TAMAÑO_var)
 tamaño_entry.grid(row=5, column=3)
 
+
+
 def on_product_selection(event):
-    global precio
+    global precio, precio_original
     # Obtiene el producto seleccionado
     selected_product = producto_entry.get()
 
@@ -191,11 +207,25 @@ def on_product_selection(event):
     # Busca el producto seleccionado en el stock y actualiza el precio
     for row in stock:
         if row['NOMBRE'] == selected_name and row['ENVASE'] == selected_size:
-            PRECIOB_var.set(row['PRECIOB'])
+            precio_original = float(row['PRECIOB'])
+            precio = precio_original
+            print(f"precio_original: {precio_original}")  # Impresión de depuración
+            if precio_bonificado_var.get() == 1:
+                precio = round(precio_original * 1.3, -1)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+            PRECIOB_var.set(precio)
             codigo_var.set(row['CODIGO'])
             existencias_var.set(row['EXISTENCIA'])
             TAMAÑO_var.set(row['ENVASE'])
             break
+
+def on_checkbox_change():
+    global precio
+    if precio_bonificado_var.get() == 1:
+        precio = round(precio_original * 1.3, -1)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+    else:
+        precio = precio_original  # Restaura el precio original
+    print(f"precio: {precio}")  # Impresión de depuración
+    PRECIOB_var.set(precio)
         
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
 producto_entry.bind('<<ComboboxSelected>>', on_product_selection)
@@ -205,10 +235,16 @@ cantidad_label.grid(row=6, column=3)
 cantidad_entry = tk.Entry(window)
 cantidad_entry.grid(row=7, column=3)
 
+var = tk.IntVar()
+var.trace('w', update_price)
+
 precio_label = tk.Label(window, text="Precio por unidad")
 precio_label.grid(row=4, column=4)
 precio_entry = tk.Entry(window, textvariable=PRECIOB_var)
 precio_entry.grid(row=5, column=4)
+
+checkbox = tk.Checkbutton(window, text='Bonificación', variable=precio_bonificado_var, command=on_checkbox_change)
+checkbox.grid(row=5, column=5)
 
 acreedor_deudor_label = tk.Label(window, text="Saldo")
 acreedor_deudor_label.grid(row=9, column=4)
@@ -231,7 +267,7 @@ def on_client_selection(event):
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
 cliente_entry.bind('<<ComboboxSelected>>', on_client_selection)
 
-agregar_button = tk.Button(window, text="Agregar producto", command=agregar_producto)
+agregar_button = tk.Button(window, text="Publico", command=agregar_producto)
 agregar_button.grid(row=10, column=3)
 
 factura_treeview = ttk.Treeview(window, columns=('Producto', 'Tamaño', 'Cantidad', 'Precio', 'Total'), show='headings')
