@@ -5,6 +5,7 @@ from dbfread import DBF
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4, A6
 from reportlab.lib.units import cm
+from datetime import datetime
 import math
 import os
 
@@ -21,6 +22,8 @@ deudor_var = tk.StringVar()
 acreedor_deudor_var = tk.StringVar()
 existencias_var = tk.StringVar()
 codigo_var = tk.StringVar()
+efectivo_var = tk.StringVar()
+cheque_var = tk.StringVar()
 
 def update_price(*args):
     if var.get():
@@ -74,9 +77,9 @@ def agregar_producto():
         total_producto = float(cantidad) * float(precio)
         factura_treeview.insert('', 'end', values=(producto, tamaño, cantidad, precio, total_producto))
         calcular_total()
-        producto_entry.delete(0, tk.END)
-        cantidad_entry.delete(0, tk.END)
-        tamaño_entry.delete(0, tk.END)
+        #producto_entry.delete(0, tk.END)
+        #cantidad_entry.delete(0, tk.END)
+        #tamaño_entry.delete(0, tk.END)
         producto_entry.focus_set()  # Mueve el cursor a la casilla producto_entry
     except ValueError:
         messagebox.showerror("Error", "Por favor, introduce un número válido")
@@ -87,16 +90,19 @@ def calcular_total():
     pagoe = 0.0
     pagoch = 0.0
     saldo = acreedor_deudor_var.get()
+    saldo = '0' if saldo == '' else saldo
     saldot = 0.0
     for child in factura_treeview.get_children():
         total += float(factura_treeview.item(child, 'values')[4])
     total_label.config(text=f"Subtotal: {total}")
     totalisimo = float(total) - float(saldo)
     totalisimo_label.config(text=f"Total: {totalisimo}")
-    pagoe= efectivo_entry.get()
-    pagoch = cheque_entry.get()
+    pagoe = efectivo_var.get() # Get value from efectivo_var
+    pagoch = cheque_var.get() # Get value from cheque_var
+    pagoe = '0' if pagoe == '' else pagoe
+    pagoch = '0' if pagoch == '' else pagoch
     pagot = float(pagoe) + float (pagoch)
-    saldot = float(totalisimo) - float(pagot)
+    saldot = -float(totalisimo) + float(pagot)
     saldo_final_label.config(text=f"Saldo final: {saldot}")
 def borrar_fila(event):
     selected = factura_treeview.selection()  # Obtener los items seleccionados
@@ -119,9 +125,17 @@ def create_and_print_invoice():
 
     # Extraer los datos del Treeview e imprimirlos en el PDF
     y = A6[1] + 400
-
+    
     c.drawRightString(left_margin + 280, y, "PX" + str(boleta_entry.get()))
     c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
+
+    y -= 20
+
+    now = datetime.now()
+    date_time_str = now.strftime("%d/%m/%Y %H:%M:%S")
+    c.drawString(left_margin + 10, y, "Fecha y hora: " + date_time_str)
+    page_number = 1
+    c.drawRightString(left_margin + 280, y, "Página: " + str(page_number))
 
     y -= 20
 
@@ -145,6 +159,31 @@ def create_and_print_invoice():
         # Mover la posición y hacia abajo para la siguiente fila
         y -= 20
 
+        if y < A6[1] + 10:
+            c.showPage()
+            c.setFont("Helvetica", 9)
+            y = A6[1] + 400
+
+            c.drawRightString(left_margin + 280, y, "PX" + str(boleta_entry.get()))
+            c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
+
+            y -= 20
+
+            now = datetime.now()
+            date_time_str = now.strftime("%d/%m/%Y %H:%M:%S")
+            c.drawString(left_margin + 10, y, "Fecha y hora: " + date_time_str)
+            page_number += 1
+            c.drawRightString(left_margin + 280, y, "Página: " + str(page_number))
+
+            y -= 20
+            
+            c.drawString(left_margin + 10, y, "Descripción")       # Producto
+            c.drawRightString(left_margin + 190, y, "Cantidad")  # Precio
+            c.drawRightString(left_margin + 230, y, "Precio")  # Total
+            c.drawRightString(left_margin + 280, y, "Total")  # Total
+
+            y -= 20
+
     # Imprimir el total
     total = total_label.cget("text")  # Obtener el texto del total
     c.drawRightString(left_margin + 280, y, total)
@@ -154,10 +193,22 @@ def create_and_print_invoice():
     saldo = acreedor_deudor_var.get()  # Obtener el texto del total
     c.drawRightString(left_margin + 280, y, "Saldo: " + saldo)
 
+    pago_ef = efectivo_var.get()
+    c.drawString(left_margin + 10, y, "Efectivo: " + pago_ef)
+
     y -= 20
+
+    pago_ch = cheque_var.get()
+    c.drawString(left_margin + 10, y, "Cheque: " + pago_ch)
     
     totalisimo = totalisimo_label.cget("text")  # Obtener el texto del total
     c.drawRightString(left_margin + 280, y, totalisimo)
+
+    y -= 20
+
+    saldo_fin = saldo_final_label.cget("text")  # Obtener el texto del total
+    c.drawRightString(left_margin + 280, y, saldo_fin)
+
     
 
     # Finalizar y guardar el PDF
@@ -275,16 +326,19 @@ checkbox.grid(row=5, column=5)
 acreedor_deudor_label = tk.Label(window, text="Saldo")
 acreedor_deudor_label.grid(row=9, column=4)
 acreedor_deudor_entry = tk.Entry(window, textvariable=acreedor_deudor_var)
+acreedor_deudor_var.trace("w", lambda name, index, mode, sv=acreedor_deudor_var: calcular_total())
 acreedor_deudor_entry.grid(row=10, column=4)
 
 efectivo_label = tk.Label(window, text="Efectivo")
 efectivo_label.grid(row=9, column=2)
-efectivo_entry = tk.Entry(window)
+efectivo_entry = tk.Entry(window, textvariable=efectivo_var)
+efectivo_var.trace("w", lambda name, index, mode, sv=efectivo_var: calcular_total())
 efectivo_entry.grid(row=10, column=2)
 
 cheque_label = tk.Label(window, text="Cheque")
 cheque_label.grid(row=9, column=1)
-cheque_entry = tk.Entry(window)
+cheque_entry = tk.Entry(window, textvariable=cheque_var)
+cheque_var.trace("w", lambda name, index, mode, sv=cheque_var: calcular_total())
 cheque_entry.grid(row=10, column=1)
 
 def on_client_selection(event):
@@ -322,7 +376,7 @@ totalisimo_label = tk.Label(window, text="Total: 0")
 totalisimo_label.grid(row=12, column=4)
 
 saldo_final_label = tk.Label(window, text="Saldo final: 0")
-totalisimo_label.grid(row=12, column=5)
+saldo_final_label.grid(row=12, column=5)
 
 print_button = tk.Button(window, text="Imprimir boleta", command=create_and_print_invoice)
 print_button.grid(row=13, column=5)
