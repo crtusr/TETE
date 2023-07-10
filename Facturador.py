@@ -87,12 +87,17 @@ def calcular_total():
     pagoe = 0.0
     pagoch = 0.0
     saldo = acreedor_deudor_var.get()
+    saldot = 0.0
     for child in factura_treeview.get_children():
         total += float(factura_treeview.item(child, 'values')[4])
     total_label.config(text=f"Subtotal: {total}")
     totalisimo = float(total) - float(saldo)
     totalisimo_label.config(text=f"Total: {totalisimo}")
-  
+    pagoe= efectivo_entry.get()
+    pagoch = cheque_entry.get()
+    pagot = float(pagoe) + float (pagoch)
+    saldot = float(totalisimo) - float(pagot)
+    saldo_final_label.config(text=f"Saldo final: {saldot}")
 def borrar_fila(event):
     selected = factura_treeview.selection()  # Obtener los items seleccionados
     for item in selected:
@@ -315,6 +320,9 @@ total_label.grid(row=12, column=3)
 
 totalisimo_label = tk.Label(window, text="Total: 0")
 totalisimo_label.grid(row=12, column=4)
+
+saldo_final_label = tk.Label(window, text="Saldo final: 0")
+totalisimo_label.grid(row=12, column=5)
 
 print_button = tk.Button(window, text="Imprimir boleta", command=create_and_print_invoice)
 print_button.grid(row=13, column=5)
