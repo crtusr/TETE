@@ -25,6 +25,32 @@ codigo_var = tk.StringVar()
 efectivo_var = tk.StringVar()
 cheque_var = tk.StringVar()
 
+def reset_program():
+    producto_entry.delete(0, 'end')
+    cliente_entry.delete(0, 'end')
+    cantidad_entry.delete(0, 'end')
+    precio_entry.delete(0, tk.END)
+    existencia_entry.delete(0, tk.END)
+    producto_entry.delete(0, tk.END)
+    cantidad_entry.delete(0, tk.END)
+    tamaño_entry.delete(0, tk.END)
+    cliente_entry.delete(0, tk.END)
+    boleta_entry.delete(0, tk.END)
+    codi_entry.delete(0, tk.END)
+    acreedor_deudor_entry.delete(0, tk.END)
+    efectivo_entry.delete(0, tk.END)
+    cheque_entry.delete(0, tk.END)
+    codi_entry.delete(0, tk.END)
+
+    # Clear the Treeview
+    for item in factura_treeview.get_children():
+        factura_treeview.delete(item)
+
+    calcular_total()
+
+reset_button = tk.Button(window, text="Nueva boleta", command=reset_program)
+reset_button.grid(row=0, column=5)
+
 def update_price(*args):
     if var.get():
         # Aumenta el precio en un 30% y redondea hacia arriba a las decenas más cercanas
@@ -33,32 +59,32 @@ def update_price(*args):
         precio_entry.insert(0, str(new_price))
 
 def autocomplete(event=None):
-    current_text = producto_entry.get().lower()  # Convierte el texto de entrada a minúsculas
-    suggestions = [row for row in stock if row['NOMBRE'].lower().startswith(current_text)]  # Convierte los nombres de los productos a minúsculas antes de hacer la comparación
+    current_text = producto_entry.get().lower()  # Convert the input text to lowercase
+    # Convert product names to lowercase before comparison
+    suggestions = [row for row in stock if current_text in row['NOMBRE'].lower()]
     if suggestions:
-        producto_entry.set('')  # Limpia el contenido actual
-        suggestions_sorted = sorted(suggestions, key=lambda row: row['NOMBRE'])  # Ordena las sugerencias en orden alfabético
-        
-        # Concatenar el nombre y el tamaño en las sugerencias
-        suggestions_with_size = [f"{row['NOMBRE']}--{row['ENVASE']}" for row in suggestions_sorted]
-        
-        producto_entry['values'] = suggestions_with_size  # Configura los nuevos valores
-        producto_entry.set(suggestions_with_size[0])  # Configura la primera sugerencia como el valor actual
+        producto_entry.set('')  # Clear the current content
+        suggestions_sorted = sorted(suggestions, key=lambda row: row['NOMBRE'])  # Sort the suggestions alphabetically
 
-    # Llama a la función autocomplete para que se ejecute cuando haya cambios en el widget
-    #producto_entry.bind('<KeyRelease>', autocomplete)
+        # Concatenate the name and size in the suggestions
+        suggestions_with_size = [f"{row['NOMBRE']}--{row['ENVASE']}" for row in suggestions_sorted]
+
+        producto_entry['values'] = suggestions_with_size  # Set the new values
+        producto_entry.set(suggestions_with_size[0])  # Set the first suggestion as the current value
 
     cli_text = cliente_entry.get().lower()
-    suggestions2 = [row for row in clipro if row['RAZON'].lower().startswith(cli_text)]
+    # Now it will also match substrings in the 'RAZON' field
+    suggestions2 = [row for row in clipro if cli_text in row['RAZON'].lower()]
     if suggestions2:
-        cliente_entry.set('')  # Limpia el contenido actual
-        suggestions2_sorted = sorted(suggestions2, key=lambda row: row['RAZON'])  # Ordena las sugerencias en orden alfabético
-        cliente_entry['values'] = [row['RAZON'] for row in suggestions2_sorted]  # Configura los nuevos valores
-        cliente_entry.set(suggestions2_sorted[0]['RAZON'])  # Configura el primer valor sugerido como el valor actual
+        cliente_entry.set('')  # Clear the current content
+        suggestions2_sorted = sorted(suggestions2, key=lambda row: row['RAZON'])  # Sort the suggestions alphabetically
+        cliente_entry['values'] = [row['RAZON'] for row in suggestions2_sorted]  # Set the new values
+        cliente_entry.set(suggestions2_sorted[0]['RAZON'])  # Set the first suggestion as the current value
 
 
 def robust_decode(bs):
-    '''Intenta decodificar una cadena de bytes utilizando varias codificaciones.'''
+    '''Intenta decodificar una cadena de bytes utilizando varias
+codificaciones.'''
     for encoding in ('utf-8', 'latin-1', 'cp1252'):  # Añade aquí más codificaciones si es necesario
         try:
             return bs.decode(encoding)
@@ -69,7 +95,6 @@ def robust_decode(bs):
 def agregar_producto():
     try:
         global precio
-        producto = producto_entry.get()
         cantidad = float(cantidad_entry.get())
         producto = producto_entry.get()
         tamaño = tamaño_entry.get()  # Obtén el valor de tamaño_entry
@@ -77,9 +102,11 @@ def agregar_producto():
         total_producto = float(cantidad) * float(precio)
         factura_treeview.insert('', 'end', values=(producto, tamaño, cantidad, precio, total_producto))
         calcular_total()
-        #producto_entry.delete(0, tk.END)
-        #cantidad_entry.delete(0, tk.END)
-        #tamaño_entry.delete(0, tk.END)
+        precio_entry.delete(0, tk.END)
+        existencia_entry.delete(0, tk.END)
+        producto_entry.delete(0, tk.END)
+        cantidad_entry.delete(0, tk.END)
+        tamaño_entry.delete(0, tk.END)
         producto_entry.focus_set()  # Mueve el cursor a la casilla producto_entry
     except ValueError:
         messagebox.showerror("Error", "Por favor, introduce un número válido")
@@ -125,7 +152,7 @@ def create_and_print_invoice():
 
     # Extraer los datos del Treeview e imprimirlos en el PDF
     y = A6[1] + 400
-    
+
     c.drawRightString(left_margin + 280, y, "PX" + str(boleta_entry.get()))
     c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
 
@@ -145,7 +172,10 @@ def create_and_print_invoice():
     c.drawRightString(left_margin + 280, y, "Total")  # Total
 
     y -= 20
-        
+
+    # Inicializar la variable para la suma de los valores
+    suma = 0
+
     for row in factura_treeview.get_children():
         # Obtener los valores de la fila
         values = factura_treeview.item(row, 'values')
@@ -153,13 +183,19 @@ def create_and_print_invoice():
         # Imprimir los valores en el PDF
         c.drawString(left_margin + 10, y, str(values[0]))       # Producto
         c.drawRightString(left_margin + 190, y, str(values[2]))  # Cantidad
-        c.drawRightString(left_margin + 230, y, str(values[3]))  # Precio
-        c.drawRightString(left_margin + 280, y, str(values[4]))  # Total
+        c.drawRightString(left_margin + 230, y, "{:.2f}".format(float(values[3])))  # Precio
+        c.drawRightString(left_margin + 280, y, "{:.2f}".format(float(values[4])))  # Total
+
+        # Sumar el valor a la variable suma
+        suma += float(values[4])
 
         # Mover la posición y hacia abajo para la siguiente fila
         y -= 20
 
-        if y < A6[1] + 10:
+        if y < A6[1] + 30:
+            # Imprimir la suma de los valores en el final de la página
+            c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+
             c.showPage()
             c.setFont("Helvetica", 9)
             y = A6[1] + 400
@@ -176,7 +212,7 @@ def create_and_print_invoice():
             c.drawRightString(left_margin + 280, y, "Página: " + str(page_number))
 
             y -= 20
-            
+
             c.drawString(left_margin + 10, y, "Descripción")       # Producto
             c.drawRightString(left_margin + 190, y, "Cantidad")  # Precio
             c.drawRightString(left_margin + 230, y, "Precio")  # Total
@@ -184,39 +220,43 @@ def create_and_print_invoice():
 
             y -= 20
 
-    # Imprimir el total
+            # Reiniciar la variable suma para la nueva página
+            suma = 0
+
     total = total_label.cget("text")  # Obtener el texto del total
-    c.drawRightString(left_margin + 280, y, total)
-
-    y -= 20
-    
-    saldo = acreedor_deudor_var.get()  # Obtener el texto del total
-    c.drawRightString(left_margin + 280, y, "Saldo: " + saldo)
-
-    pago_ef = efectivo_var.get()
-    c.drawString(left_margin + 10, y, "Efectivo: " + pago_ef)
+    total = total.split(" ")[1]  # Quitar la palabra "Subtotal:"
+    c.drawRightString(left_margin + 280, y, "Subtotal {:.2f}".format(float(total)))  # Imprimir el total
 
     y -= 20
 
-    pago_ch = cheque_var.get()
-    c.drawString(left_margin + 10, y, "Cheque: " + pago_ch)
-    
-    totalisimo = totalisimo_label.cget("text")  # Obtener el texto del total
-    c.drawRightString(left_margin + 280, y, totalisimo)
+    saldo = acreedor_deudor_var.get()  # Obtener el texto del saldo
+    c.drawRightString(left_margin + 280, y, "Saldo: {:.2f}".format(float(saldo)))  # Imprimir el saldo
+
+    pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
+    c.drawString(left_margin + 10, y, "Efectivo: {:.2f}".format(float(pago_ef)))  # Imprimir el pago en efectivo
 
     y -= 20
 
-    saldo_fin = saldo_final_label.cget("text")  # Obtener el texto del total
-    c.drawRightString(left_margin + 280, y, saldo_fin)
+    pago_ch = cheque_var.get()  # Obtener el texto del pago con cheque
+    c.drawString(left_margin + 10, y, "Cheque: {:.2f}".format(float(pago_ch)))  # Imprimir el pago con cheque
 
-    
+    totalisimo = totalisimo_label.cget("text")  # Obtener el texto del totalisimo
+    totalisimo = totalisimo.split(" ")[1]  # Quitar la palabra "Total:"
+    c.drawRightString(left_margin + 280, y, "Total {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
+
+    y -= 20
+
+    saldo_fin = saldo_final_label.cget("text")  # Obtener el texto del saldo final
+    saldo_fin = saldo_fin.split(" ")[2]  # Quitar la palabra "Total:"
+    c.drawRightString(left_margin + 280, y, "Saldo final: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
 
     # Finalizar y guardar el PDF
     c.save()
 
     # Abrir el PDF con el lector de PDF predeterminado
     subprocess.Popen(["boleta.pdf"], shell=True)
-    
+
+
     # Imprimir el PDF
     # os.startfile("boleta.pdf", "print")
 
@@ -294,6 +334,7 @@ def on_product_selection(event):
             existencias_var.set(row['EXISTENCIA'])
             TAMAÑO_var.set(row['ENVASE'])
             break
+    cantidad_entry.focus_set()
 
 def on_checkbox_change():
     global precio
@@ -303,7 +344,7 @@ def on_checkbox_change():
         precio = precio_original  # Restaura el precio original
     # print(f"precio: {precio}")  # Impresión de depuración
     PRECIOB_var.set(precio)
-        
+
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
 producto_entry.bind('<<ComboboxSelected>>', on_product_selection)
 
@@ -320,7 +361,8 @@ precio_label.grid(row=4, column=4)
 precio_entry = tk.Entry(window, textvariable=PRECIOB_var)
 precio_entry.grid(row=5, column=4)
 
-checkbox = tk.Checkbutton(window, text='Publico', variable=precio_bonificado_var, command=on_checkbox_change)
+checkbox = tk.Checkbutton(window, text='Publico',
+variable=precio_bonificado_var, command=on_checkbox_change)
 checkbox.grid(row=5, column=5)
 
 acreedor_deudor_label = tk.Label(window, text="Saldo")
@@ -353,7 +395,7 @@ def on_client_selection(event):
             deudor_var.set(row['DEUDOR'])
             acreedor_deudor_var.set(float(acreedor_var.get()) - float(deudor_var.get()))
             break
-        
+
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
 cliente_entry.bind('<<ComboboxSelected>>', on_client_selection)
 
@@ -367,6 +409,9 @@ factura_treeview.heading('Cantidad', text='Cantidad')
 factura_treeview.heading('Precio', text='Precio')
 factura_treeview.heading('Total', text='Total')
 factura_treeview.grid(row=11, column=0, columnspan=6)
+scrollbar = ttk.Scrollbar(window, orient="vertical", command=factura_treeview.yview)
+scrollbar.grid(row=11, column=7, sticky="ns")
+factura_treeview.configure(yscrollcommand=scrollbar.set)
 factura_treeview.bind('<Delete>', borrar_fila)
 
 total_label = tk.Label(window, text="Subtotal: 0")
@@ -378,7 +423,8 @@ totalisimo_label.grid(row=12, column=4)
 saldo_final_label = tk.Label(window, text="Saldo final: 0")
 saldo_final_label.grid(row=12, column=5)
 
-print_button = tk.Button(window, text="Imprimir boleta", command=create_and_print_invoice)
+print_button = tk.Button(window, text="Imprimir boleta",
+command=create_and_print_invoice)
 print_button.grid(row=13, column=5)
 
 window.mainloop()
