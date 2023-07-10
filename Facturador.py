@@ -8,8 +8,6 @@ from reportlab.lib.units import cm
 import math
 import os
 
-
-
 window = tk.Tk()
 
 window.title("Facturador")
@@ -79,14 +77,27 @@ def agregar_producto():
         producto_entry.delete(0, tk.END)
         cantidad_entry.delete(0, tk.END)
         tamaño_entry.delete(0, tk.END)
+        producto_entry.focus_set()  # Mueve el cursor a la casilla producto_entry
     except ValueError:
         messagebox.showerror("Error", "Por favor, introduce un número válido")
 
 def calcular_total():
     total = 0.0
+    totalisimo = 0.0
+    pagoe = 0.0
+    pagoch = 0.0
+    saldo = acreedor_deudor_var.get()
     for child in factura_treeview.get_children():
         total += float(factura_treeview.item(child, 'values')[4])
     total_label.config(text=f"Subtotal: {total}")
+    totalisimo = float(total) - float(saldo)
+    totalisimo_label.config(text=f"Total: {totalisimo}")
+  
+def borrar_fila(event):
+    selected = factura_treeview.selection()  # Obtener los items seleccionados
+    for item in selected:
+        factura_treeview.delete(item)  # Eliminar el item del Treeview
+
 
 import subprocess
 
@@ -104,6 +115,7 @@ def create_and_print_invoice():
     # Extraer los datos del Treeview e imprimirlos en el PDF
     y = A6[1] + 400
 
+    c.drawRightString(left_margin + 280, y, "PX" + str(boleta_entry.get()))
     c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
 
     y -= 20
@@ -137,6 +149,12 @@ def create_and_print_invoice():
     saldo = acreedor_deudor_var.get()  # Obtener el texto del total
     c.drawRightString(left_margin + 280, y, "Saldo: " + saldo)
 
+    y -= 20
+    
+    totalisimo = totalisimo_label.cget("text")  # Obtener el texto del total
+    c.drawRightString(left_margin + 280, y, totalisimo)
+    
+
     # Finalizar y guardar el PDF
     c.save()
 
@@ -169,8 +187,13 @@ cliente_label.grid(row=0, column=3)
 cliente_entry = ttk.Combobox(window, postcommand=autocomplete)
 cliente_entry.grid(row=1, column=3)
 
-numero_label = tk.Label(window, text="numero de cliente")
-numero_label.grid(row=0, column=3)
+boleta_label = tk.Label(window, text="Boleta")
+boleta_label.grid(row=0, column=4)
+boleta_entry = tk.Entry(window)
+boleta_entry.grid(row=1, column=4)
+
+numero_label = tk.Label(window, text="Numero de cliente")
+numero_label.grid(row=0, column=2)
 numero_entry = tk.Entry(window, textvariable=numero_var)
 numero_entry.grid(row=1, column=2)
 
@@ -194,8 +217,6 @@ tamaño_label.grid(row=4, column=3)
 tamaño_entry = tk.Entry(window, textvariable=TAMAÑO_var)
 tamaño_entry.grid(row=5, column=3)
 
-
-
 def on_product_selection(event):
     global precio, precio_original
     # Obtiene el producto seleccionado
@@ -209,7 +230,7 @@ def on_product_selection(event):
         if row['NOMBRE'] == selected_name and row['ENVASE'] == selected_size:
             precio_original = float(row['PRECIOB'])
             precio = precio_original
-            print(f"precio_original: {precio_original}")  # Impresión de depuración
+            # print(f"precio_original: {precio_original}")  # Impresión de depuración
             if precio_bonificado_var.get() == 1:
                 precio = round(precio_original * 1.3, -1)  # Aumenta el precio en un 30% y redondea a la decena más cercana
             PRECIOB_var.set(precio)
@@ -224,7 +245,7 @@ def on_checkbox_change():
         precio = round(precio_original * 1.3, -1)  # Aumenta el precio en un 30% y redondea a la decena más cercana
     else:
         precio = precio_original  # Restaura el precio original
-    print(f"precio: {precio}")  # Impresión de depuración
+    # print(f"precio: {precio}")  # Impresión de depuración
     PRECIOB_var.set(precio)
         
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
@@ -243,13 +264,23 @@ precio_label.grid(row=4, column=4)
 precio_entry = tk.Entry(window, textvariable=PRECIOB_var)
 precio_entry.grid(row=5, column=4)
 
-checkbox = tk.Checkbutton(window, text='Bonificación', variable=precio_bonificado_var, command=on_checkbox_change)
+checkbox = tk.Checkbutton(window, text='Publico', variable=precio_bonificado_var, command=on_checkbox_change)
 checkbox.grid(row=5, column=5)
 
 acreedor_deudor_label = tk.Label(window, text="Saldo")
 acreedor_deudor_label.grid(row=9, column=4)
 acreedor_deudor_entry = tk.Entry(window, textvariable=acreedor_deudor_var)
 acreedor_deudor_entry.grid(row=10, column=4)
+
+efectivo_label = tk.Label(window, text="Efectivo")
+efectivo_label.grid(row=9, column=2)
+efectivo_entry = tk.Entry(window)
+efectivo_entry.grid(row=10, column=2)
+
+cheque_label = tk.Label(window, text="Cheque")
+cheque_label.grid(row=9, column=1)
+cheque_entry = tk.Entry(window)
+cheque_entry.grid(row=10, column=1)
 
 def on_client_selection(event):
     # Obtiene el producto seleccionado
@@ -267,7 +298,7 @@ def on_client_selection(event):
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
 cliente_entry.bind('<<ComboboxSelected>>', on_client_selection)
 
-agregar_button = tk.Button(window, text="Publico", command=agregar_producto)
+agregar_button = tk.Button(window, text="Agregar", command=agregar_producto)
 agregar_button.grid(row=10, column=3)
 
 factura_treeview = ttk.Treeview(window, columns=('Producto', 'Tamaño', 'Cantidad', 'Precio', 'Total'), show='headings')
@@ -277,9 +308,13 @@ factura_treeview.heading('Cantidad', text='Cantidad')
 factura_treeview.heading('Precio', text='Precio')
 factura_treeview.heading('Total', text='Total')
 factura_treeview.grid(row=11, column=0, columnspan=6)
+factura_treeview.bind('<Delete>', borrar_fila)
 
-total_label = tk.Label(window, text="Total: 0")
+total_label = tk.Label(window, text="Subtotal: 0")
 total_label.grid(row=12, column=3)
+
+totalisimo_label = tk.Label(window, text="Total: 0")
+totalisimo_label.grid(row=12, column=4)
 
 print_button = tk.Button(window, text="Imprimir boleta", command=create_and_print_invoice)
 print_button.grid(row=13, column=5)
