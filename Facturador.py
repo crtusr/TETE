@@ -40,7 +40,7 @@ def reset_program():
     acreedor_deudor_entry.delete(0, tk.END)
     efectivo_entry.delete(0, tk.END)
     cheque_entry.delete(0, tk.END)
-    codi_entry.delete(0, tk.END)
+    numero_entry.delete(0, tk.END)
 
     # Clear the Treeview
     for item in factura_treeview.get_children():
@@ -70,7 +70,7 @@ def autocomplete(event=None):
         suggestions_with_size = [f"{row['NOMBRE']}--{row['ENVASE']}" for row in suggestions_sorted]
 
         producto_entry['values'] = suggestions_with_size  # Set the new values
-        producto_entry.set(suggestions_with_size[0])  # Set the first suggestion as the current value
+        #producto_entry.set(suggestions_with_size[0])  # Set the first suggestion as the current value
 
     cli_text = cliente_entry.get().lower()
     # Now it will also match substrings in the 'RAZON' field
@@ -175,6 +175,7 @@ def create_and_print_invoice():
 
     # Inicializar la variable para la suma de los valores
     suma = 0
+    suma_total = 0
 
     for row in factura_treeview.get_children():
         # Obtener los valores de la fila
@@ -188,13 +189,24 @@ def create_and_print_invoice():
 
         # Sumar el valor a la variable suma
         suma += float(values[4])
+        suma_total += float(values[4])
 
         # Mover la posición y hacia abajo para la siguiente fila
-        y -= 20
+        y -= 13
 
-        if y < A6[1] + 30:
+        if y < A6[1] + 70:
             # Imprimir la suma de los valores en el final de la página
-            c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+            if page_number > 1:
+                y -=7
+                c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+                y -= 13
+                c.drawRightString(left_margin + 280, y, "Suma de paginas anteriores: {:.2f}".format(suma_total - suma))
+                y -= 13
+                c.drawRightString(left_margin + 280, y, "Subtotal: {:.2f}".format(suma_total))
+
+            else:
+                y -=7
+                c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
 
             c.showPage()
             c.setFont("Helvetica", 9)
@@ -223,28 +235,272 @@ def create_and_print_invoice():
             # Reiniciar la variable suma para la nueva página
             suma = 0
 
+        elif y < A6[1] + 90 and page_number > 1:
+
+            # Imprimir la suma de los valores en el final de la página
+            if page_number > 1:
+                y -=7
+                c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+                y -= 13
+                c.drawRightString(left_margin + 280, y, "Suma de paginas anteriores: {:.2f}".format(suma_total - suma))
+                y -= 13
+                c.drawRightString(left_margin + 280, y, "Subtotal: {:.2f}".format(suma_total))
+
+            else:
+                y -=7
+                c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+
+            c.showPage()
+            c.setFont("Helvetica", 9)
+            y = A6[1] + 400
+
+            c.drawRightString(left_margin + 280, y, "PX" + str(boleta_entry.get()))
+            c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
+
+            y -= 20
+
+            now = datetime.now()
+            date_time_str = now.strftime("%d/%m/%Y %H:%M:%S")
+            c.drawString(left_margin + 10, y, "Fecha y hora: " + date_time_str)
+            page_number += 1
+            c.drawRightString(left_margin + 280, y, "Página: " + str(page_number))
+
+            y -= 20
+
+            c.drawString(left_margin + 10, y, "Descripción")       # Producto
+            c.drawRightString(left_margin + 190, y, "Cantidad")  # Precio
+            c.drawRightString(left_margin + 230, y, "Precio")  # Total
+            c.drawRightString(left_margin + 280, y, "Total")  # Total
+
+            y -= 20
+
+            # Reiniciar la variable suma para la nueva página
+            suma = 0
+
+    if page_number > 1:
+
+        y -=7
+
+        c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+
+        y -= 13
+
+        c.drawRightString(left_margin + 280, y, "Suma de paginas anteriores: {:.2f}".format(suma_total - suma))
+
+        y -= 13
+
+    else:
+
+        y -= 7
+        
+    
     total = total_label.cget("text")  # Obtener el texto del total
     total = total.split(" ")[1]  # Quitar la palabra "Subtotal:"
     c.drawRightString(left_margin + 280, y, "Subtotal {:.2f}".format(float(total)))  # Imprimir el total
 
-    y -= 20
+    y -= 13
 
     saldo = acreedor_deudor_var.get()  # Obtener el texto del saldo
+    saldo = '0' if saldo == '' else saldo
     c.drawRightString(left_margin + 280, y, "Saldo: {:.2f}".format(float(saldo)))  # Imprimir el saldo
 
     pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
+    pago_ef = '0' if pago_ef == '' else pago_ef
     c.drawString(left_margin + 10, y, "Efectivo: {:.2f}".format(float(pago_ef)))  # Imprimir el pago en efectivo
 
-    y -= 20
+    y -= 13
 
     pago_ch = cheque_var.get()  # Obtener el texto del pago con cheque
+    pago_ch = '0' if pago_ch == '' else pago_ch
     c.drawString(left_margin + 10, y, "Cheque: {:.2f}".format(float(pago_ch)))  # Imprimir el pago con cheque
 
     totalisimo = totalisimo_label.cget("text")  # Obtener el texto del totalisimo
     totalisimo = totalisimo.split(" ")[1]  # Quitar la palabra "Total:"
     c.drawRightString(left_margin + 280, y, "Total {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
 
+    y -= 13
+
+    saldo_fin = saldo_final_label.cget("text")  # Obtener el texto del saldo final
+    saldo_fin = saldo_fin.split(" ")[2]  # Quitar la palabra "Total:"
+    c.drawRightString(left_margin + 280, y, "Saldo final: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
+
+    #######
+
+    c.showPage()
+
+    c.setFont("Helvetica", 9)
+
+    # Extraer los datos del Treeview e imprimirlos en el PDF
+    y = A6[1] + 400
+
+    c.drawRightString(left_margin + 280, y, "PX" + str(boleta_entry.get()))
+    c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
+
     y -= 20
+
+    now = datetime.now()
+    date_time_str = now.strftime("%d/%m/%Y %H:%M:%S")
+    c.drawString(left_margin + 10, y, "Fecha y hora: " + date_time_str)
+    c.drawString(left_margin + 180, y, "DUPLICADO")
+    page_number = 1
+    c.drawRightString(left_margin + 280, y, "Página: " + str(page_number))
+
+    y -= 20
+
+    c.drawString(left_margin + 10, y, "Descripción")       # Producto
+    c.drawRightString(left_margin + 190, y, "Cantidad")  # Precio
+    c.drawRightString(left_margin + 230, y, "Precio")  # Total
+    c.drawRightString(left_margin + 280, y, "Total")  # Total
+
+    y -= 20
+
+    # Inicializar la variable para la suma de los valores
+    suma = 0
+    suma_total = 0
+
+    for row in factura_treeview.get_children():
+        # Obtener los valores de la fila
+        values = factura_treeview.item(row, 'values')
+
+        # Imprimir los valores en el PDF
+        c.drawString(left_margin + 10, y, str(values[0]))       # Producto
+        c.drawRightString(left_margin + 190, y, str(values[2]))  # Cantidad
+        c.drawRightString(left_margin + 230, y, "{:.2f}".format(float(values[3])))  # Precio
+        c.drawRightString(left_margin + 280, y, "{:.2f}".format(float(values[4])))  # Total
+
+        # Sumar el valor a la variable suma
+        suma += float(values[4])
+        suma_total += float(values[4])
+
+        # Mover la posición y hacia abajo para la siguiente fila
+        y -= 13
+
+        if y < A6[1] + 70:
+            # Imprimir la suma de los valores en el final de la página
+            if page_number > 1:
+                y -=7
+                c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+                y -= 13
+                c.drawRightString(left_margin + 280, y, "Suma de paginas anteriores: {:.2f}".format(suma_total - suma))
+                y -= 13
+                c.drawRightString(left_margin + 280, y, "Subtotal: {:.2f}".format(suma_total))
+
+            else:
+                y -=7
+                c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+
+            c.showPage()
+            c.setFont("Helvetica", 9)
+            y = A6[1] + 400
+
+            c.drawRightString(left_margin + 280, y, "PX" + str(boleta_entry.get()))
+            c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
+
+            y -= 20
+
+            now = datetime.now()
+            date_time_str = now.strftime("%d/%m/%Y %H:%M:%S")
+            c.drawString(left_margin + 10, y, "Fecha y hora: " + date_time_str)
+            c.drawString(left_margin + 180, y, "DUPLICADO")
+            page_number += 1
+            c.drawRightString(left_margin + 280, y, "Página: " + str(page_number))
+
+            y -= 20
+
+            c.drawString(left_margin + 10, y, "Descripción")       # Producto
+            c.drawRightString(left_margin + 190, y, "Cantidad")  # Precio
+            c.drawRightString(left_margin + 230, y, "Precio")  # Total
+            c.drawRightString(left_margin + 280, y, "Total")  # Total
+
+            y -= 20
+
+            # Reiniciar la variable suma para la nueva página
+            suma = 0
+
+        elif y < A6[1] + 90 and page_number > 1:
+
+            # Imprimir la suma de los valores en el final de la página
+            if page_number > 1:
+                y -=7
+                c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+                y -= 13
+                c.drawRightString(left_margin + 280, y, "Suma de paginas anteriores: {:.2f}".format(suma_total - suma))
+                y -= 13
+                c.drawRightString(left_margin + 280, y, "Subtotal: {:.2f}".format(suma_total))
+
+            else:
+                y -=7
+                c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+
+            c.showPage()
+            c.setFont("Helvetica", 9)
+            y = A6[1] + 400
+
+            c.drawRightString(left_margin + 280, y, "PX" + str(boleta_entry.get()))
+            c.drawString(left_margin + 10, y, "Cliente: " + str(cliente_entry.get()) + " " + str(numero_entry.get()))
+
+            y -= 20
+
+            now = datetime.now()
+            date_time_str = now.strftime("%d/%m/%Y %H:%M:%S")
+            c.drawString(left_margin + 10, y, "Fecha y hora: " + date_time_str)
+            page_number += 1
+            c.drawRightString(left_margin + 280, y, "Página: " + str(page_number))
+
+            y -= 20
+
+            c.drawString(left_margin + 10, y, "Descripción")       # Producto
+            c.drawRightString(left_margin + 190, y, "Cantidad")  # Precio
+            c.drawRightString(left_margin + 230, y, "Precio")  # Total
+            c.drawRightString(left_margin + 280, y, "Total")  # Total
+
+            y -= 20
+
+            # Reiniciar la variable suma para la nueva página
+            suma = 0
+
+    if page_number > 1:
+
+        y -=7
+
+        c.drawRightString(left_margin + 280, y, "Suma de la pagina: {:.2f}".format(suma))
+
+        y -= 13
+
+        c.drawRightString(left_margin + 280, y, "Suma de paginas anteriores: {:.2f}".format(suma_total - suma))
+
+        y -= 13
+
+    else:
+
+        y -= 7
+        
+    
+    total = total_label.cget("text")  # Obtener el texto del total
+    total = total.split(" ")[1]  # Quitar la palabra "Subtotal:"
+    c.drawRightString(left_margin + 280, y, "Subtotal {:.2f}".format(float(total)))  # Imprimir el total
+
+    y -= 13
+
+    saldo = acreedor_deudor_var.get()  # Obtener el texto del saldo
+    saldo = '0' if saldo == '' else saldo
+    c.drawRightString(left_margin + 280, y, "Saldo: {:.2f}".format(float(saldo)))  # Imprimir el saldo
+
+    pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
+    pago_ef = '0' if pago_ef == '' else pago_ef
+    c.drawString(left_margin + 10, y, "Efectivo: {:.2f}".format(float(pago_ef)))  # Imprimir el pago en efectivo
+
+    y -= 13
+
+    pago_ch = cheque_var.get()  # Obtener el texto del pago con cheque
+    pago_ch = '0' if pago_ch == '' else pago_ch
+    c.drawString(left_margin + 10, y, "Cheque: {:.2f}".format(float(pago_ch)))  # Imprimir el pago con cheque
+
+    totalisimo = totalisimo_label.cget("text")  # Obtener el texto del totalisimo
+    totalisimo = totalisimo.split(" ")[1]  # Quitar la palabra "Total:"
+    c.drawRightString(left_margin + 280, y, "Total {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
+
+    y -= 13
 
     saldo_fin = saldo_final_label.cget("text")  # Obtener el texto del saldo final
     saldo_fin = saldo_fin.split(" ")[2]  # Quitar la palabra "Total:"
@@ -254,29 +510,28 @@ def create_and_print_invoice():
     c.save()
 
     # Abrir el PDF con el lector de PDF predeterminado
-    subprocess.Popen(["boleta.pdf"], shell=True)
+    #subprocess.Popen(["boleta.pdf"], shell=True)
 
 
     # Imprimir el PDF
-    # os.startfile("boleta.pdf", "print")
-
-
+    os.startfile("boleta.pdf", "print")
+    
 import os
 from dbfread import DBF
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 dbf_file = os.path.join(current_dir, 'STOCK1.DBF')
 
-stock = DBF(dbf_file, encoding='ANSI')
+stock = DBF(dbf_file, encoding='cp437')
 
  # Abrir y leer el archivo CLIPRO.DBF
 dbf_file2 = os.path.join(current_dir, 'CLIPRO.DBF')
-clipro = DBF(dbf_file2, encoding='ANSI')
+clipro = DBF(dbf_file2, encoding='cp437')
 
 
 # Abrir y leer el archivo PROVE.DBF
 dbf_file3 = os.path.join(current_dir, 'PROVE.DBF')
-prove = DBF(dbf_file3, encoding='ANSI')
+prove = DBF(dbf_file3, encoding='cp437')
 
 cliente_label = tk.Label(window, text="Nombre del Cliente")
 cliente_label.grid(row=0, column=3)
@@ -395,6 +650,7 @@ def on_client_selection(event):
             deudor_var.set(row['DEUDOR'])
             acreedor_deudor_var.set(float(acreedor_var.get()) - float(deudor_var.get()))
             break
+    producto_entry.focus_set()
 
 # Vincula el evento de selección de la lista de sugerencias a la función on_product_selection
 cliente_entry.bind('<<ComboboxSelected>>', on_client_selection)
@@ -415,12 +671,15 @@ factura_treeview.configure(yscrollcommand=scrollbar.set)
 factura_treeview.bind('<Delete>', borrar_fila)
 
 total_label = tk.Label(window, text="Subtotal: 0")
+total_label.configure(font=('Arial', 15))
 total_label.grid(row=12, column=3)
 
 totalisimo_label = tk.Label(window, text="Total: 0")
+totalisimo_label.configure(font=('Arial', 15))
 totalisimo_label.grid(row=12, column=4)
 
 saldo_final_label = tk.Label(window, text="Saldo final: 0")
+saldo_final_label.configure(font=('Arial', 15))
 saldo_final_label.grid(row=12, column=5)
 
 print_button = tk.Button(window, text="Imprimir boleta",
