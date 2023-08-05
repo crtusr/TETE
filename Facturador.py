@@ -56,6 +56,7 @@ def update_price(*args):
         # Aumenta el precio en un 30% y redondea hacia arriba a las decenas más cercanas
         new_price = math.ceil((float(precio_entry.get()) * 1.3) / 10.0) * 10
         precio_entry.delete(0, tk.END)
+        print(str(new_price))
         precio_entry.insert(0, str(new_price))
 
 def autocomplete(event=None):
@@ -302,7 +303,7 @@ def create_and_print_invoice():
 
     saldo = acreedor_deudor_var.get()  # Obtener el texto del saldo
     saldo = '0' if saldo == '' else saldo
-    c.drawRightString(left_margin + 280, y, "Saldo: {:.2f}".format(float(saldo)))  # Imprimir el saldo
+    c.drawRightString(left_margin + 280, y, "Saldo anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
 
     pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
     pago_ef = '0' if pago_ef == '' else pago_ef
@@ -324,7 +325,7 @@ def create_and_print_invoice():
     saldo_fin = saldo_fin.split(" ")[2]  # Quitar la palabra "Total:"
     c.drawRightString(left_margin + 280, y, "Saldo final: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
 
-    #######
+    ####### DUPLICADO
 
     c.showPage()
 
@@ -484,7 +485,7 @@ def create_and_print_invoice():
 
     saldo = acreedor_deudor_var.get()  # Obtener el texto del saldo
     saldo = '0' if saldo == '' else saldo
-    c.drawRightString(left_margin + 280, y, "Saldo: {:.2f}".format(float(saldo)))  # Imprimir el saldo
+    c.drawRightString(left_margin + 280, y, "Saldo anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
 
     pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
     pago_ef = '0' if pago_ef == '' else pago_ef
@@ -522,16 +523,16 @@ from dbfread import DBF
 current_dir = os.path.dirname(os.path.realpath(__file__))
 dbf_file = os.path.join(current_dir, 'STOCK1.DBF')
 
-stock = DBF(dbf_file, encoding='cp437')
+stock = DBF(dbf_file, encoding='cp850')
 
  # Abrir y leer el archivo CLIPRO.DBF
 dbf_file2 = os.path.join(current_dir, 'CLIPRO.DBF')
-clipro = DBF(dbf_file2, encoding='cp437')
+clipro = DBF(dbf_file2, encoding='cp850')
 
 
 # Abrir y leer el archivo PROVE.DBF
 dbf_file3 = os.path.join(current_dir, 'PROVE.DBF')
-prove = DBF(dbf_file3, encoding='cp437')
+prove = DBF(dbf_file3, encoding='cp850')
 
 cliente_label = tk.Label(window, text="Nombre del Cliente")
 cliente_label.grid(row=0, column=3)
@@ -594,7 +595,7 @@ def on_product_selection(event):
 def on_checkbox_change():
     global precio
     if precio_bonificado_var.get() == 1:
-        precio = round(precio_original * 1.3, -1)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+        precio = float(math.ceil((float(precio_entry.get()) * 1.3) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
     else:
         precio = precio_original  # Restaura el precio original
     # print(f"precio: {precio}")  # Impresión de depuración
