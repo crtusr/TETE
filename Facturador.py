@@ -6,6 +6,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4, A6
 from reportlab.lib.units import cm
 from datetime import datetime
+from reportlab.lib.colors import red, black, white
+from reportlab.pdfbase.pdfmetrics import stringWidth
 import math
 import os
 
@@ -298,7 +300,7 @@ def create_and_print_invoice():
     
     total = total_label.cget("text")  # Obtener el texto del total
     total = total.split(" ")[1]  # Quitar la palabra "Subtotal:"
-    c.drawRightString(left_margin + 280, y, "Subtotal {:.2f}".format(float(total)))  # Imprimir el total
+    c.drawRightString(left_margin + 280, y, "Subtotal: {:.2f}".format(float(total)))  # Imprimir el total
 
     y -= 13
 
@@ -307,24 +309,47 @@ def create_and_print_invoice():
     c.drawRightString(left_margin + 280, y, "Saldo anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
 
     pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
-    pago_ef = '0' if pago_ef == '' else pago_ef
-    c.drawString(left_margin + 10, y, "Efectivo: {:.2f}".format(float(pago_ef)))  # Imprimir el pago en efectivo
+    pago_ef = float(0) if pago_ef == '' else pago_ef
+    if pago_ef != 0:
+        cash = "Efectivo: {:.2f}".format(float(pago_ef))
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(left_margin + 10, y, cash)
+        c.setFont("Helvetica", 9)
+    else:
+        c.setFont("Helvetica", 9)
+        c.drawString(left_margin + 10, y, "Efectivo: {:.2f}".format(float(pago_ef)))  # Imprimir el pago en efectivo
 
     y -= 13
 
     pago_ch = cheque_var.get()  # Obtener el texto del pago con cheque
     pago_ch = '0' if pago_ch == '' else pago_ch
-    c.drawString(left_margin + 10, y, "Cheque: {:.2f}".format(float(pago_ch)))  # Imprimir el pago con cheque
+    pago_ch = float(pago_ch)
+    if pago_ch != 0:
+        check = "Cheque: {:.2f}".format(float(pago_ch))
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(left_margin + 10, y, check)
+        c.setFont("Helvetica", 9)
+    else:
+        c.setFont("Helvetica", 9)
+        c.drawString(left_margin + 10, y, "Cheque: {:.2f}".format(float(pago_ch)))  # Imprimir el pago con cheque
 
     totalisimo = totalisimo_label.cget("text")  # Obtener el texto del totalisimo
     totalisimo = totalisimo.split(" ")[1]  # Quitar la palabra "Total:"
-    c.drawRightString(left_margin + 280, y, "Total {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
+    c.drawRightString(left_margin + 280, y, "Total: {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
 
     y -= 13
 
     saldo_fin = saldo_final_label.cget("text")  # Obtener el texto del saldo final
     saldo_fin = saldo_fin.split(" ")[2]  # Quitar la palabra "Total:"
-    c.drawRightString(left_margin + 280, y, "Saldo final: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
+    saldo_fin_float = float(saldo_fin)
+    if saldo_fin_float != 0:
+        debt = "SALDO FINAL: {:.2f}".format(float(saldo_fin))
+        c.setFont("Helvetica-Bold", 9)
+        c.drawRightString(left_margin + 280, y, debt)
+        c.setFont("Helvetica", 9)
+    else:
+        c.setFont("Helvetica", 9)
+        c.drawRightString(left_margin + 280, y, "SALDO FINAL: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
 
     ####### DUPLICADO
 
@@ -480,7 +505,7 @@ def create_and_print_invoice():
     
     total = total_label.cget("text")  # Obtener el texto del total
     total = total.split(" ")[1]  # Quitar la palabra "Subtotal:"
-    c.drawRightString(left_margin + 280, y, "Subtotal {:.2f}".format(float(total)))  # Imprimir el total
+    c.drawRightString(left_margin + 280, y, "Subtotal: {:.2f}".format(float(total)))  # Imprimir el total
 
     y -= 13
 
@@ -489,34 +514,57 @@ def create_and_print_invoice():
     c.drawRightString(left_margin + 280, y, "Saldo anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
 
     pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
-    pago_ef = '0' if pago_ef == '' else pago_ef
-    c.drawString(left_margin + 10, y, "Efectivo: {:.2f}".format(float(pago_ef)))  # Imprimir el pago en efectivo
+    pago_ef = float(0) if pago_ef == '' else pago_ef
+    if pago_ef != 0:
+        cash = "Efectivo: {:.2f}".format(float(pago_ef))
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(left_margin + 10, y, cash)
+        c.setFont("Helvetica", 9)
+    else:
+        c.setFont("Helvetica", 9)
+        c.drawString(left_margin + 10, y, "Efectivo: {:.2f}".format(float(pago_ef)))  # Imprimir el pago en efectivo
 
     y -= 13
 
     pago_ch = cheque_var.get()  # Obtener el texto del pago con cheque
     pago_ch = '0' if pago_ch == '' else pago_ch
-    c.drawString(left_margin + 10, y, "Cheque: {:.2f}".format(float(pago_ch)))  # Imprimir el pago con cheque
+    pago_ch = float(pago_ch)
+    if pago_ch != 0:
+        check = "Cheque: {:.2f}".format(float(pago_ch))
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(left_margin + 10, y, check)
+        c.setFont("Helvetica", 9)
+    else:
+        c.setFont("Helvetica", 9)
+        c.drawString(left_margin + 10, y, "Cheque: {:.2f}".format(float(pago_ch)))  # Imprimir el pago con cheque
 
     totalisimo = totalisimo_label.cget("text")  # Obtener el texto del totalisimo
     totalisimo = totalisimo.split(" ")[1]  # Quitar la palabra "Total:"
-    c.drawRightString(left_margin + 280, y, "Total {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
+    c.drawRightString(left_margin + 280, y, "Total: {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
 
     y -= 13
 
     saldo_fin = saldo_final_label.cget("text")  # Obtener el texto del saldo final
     saldo_fin = saldo_fin.split(" ")[2]  # Quitar la palabra "Total:"
-    c.drawRightString(left_margin + 280, y, "Saldo final: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
+    saldo_fin_float = float(saldo_fin)
+    if saldo_fin_float != 0:
+        debt = "SALDO FINAL: {:.2f}".format(float(saldo_fin))
+        c.setFont("Helvetica-Bold", 9)
+        c.drawRightString(left_margin + 280, y, debt)
+        c.setFont("Helvetica", 9)
+    else:
+        c.setFont("Helvetica", 9)
+        c.drawRightString(left_margin + 280, y, "SALDO FINAL: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
 
     # Finalizar y guardar el PDF
     c.save()
 
     # Abrir el PDF con el lector de PDF predeterminado
-    #subprocess.Popen(["boleta.pdf"], shell=True)
+    subprocess.Popen(["boleta.pdf"], shell=True)
 
 
     # Imprimir el PDF
-    os.startfile("boleta.pdf", "print")
+    #os.startfile("boleta.pdf", "print")
     
 import os
 from dbfread import DBF
