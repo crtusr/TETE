@@ -41,6 +41,7 @@ def reset_program():
     efectivo_entry.delete(0, tk.END)
     cheque_entry.delete(0, tk.END)
     numero_entry.delete(0, tk.END)
+    cliente_entry.focus_set()
 
     # Clear the Treeview
     for item in factura_treeview.get_children():
@@ -93,7 +94,7 @@ codificaciones.'''
             pass
     raise UnicodeDecodeError('No se pudo decodificar la cadena de bytes')
 
-def agregar_producto():
+def agregar_producto(event=None):
     try:
         global precio
         cantidad = float(cantidad_entry.get())
@@ -536,8 +537,17 @@ prove = DBF(dbf_file3, encoding='cp850')
 
 cliente_label = tk.Label(window, text="Nombre del Cliente")
 cliente_label.grid(row=0, column=3)
-cliente_entry = ttk.Combobox(window, postcommand=autocomplete)
+
+cliente_var = tk.StringVar()  # Create a StringVar instance
+
+def update_title(*args):  # Function to update window title
+    window.title(cliente_var.get())
+
+cliente_var.trace('w', update_title)
+
+cliente_entry = ttk.Combobox(window, textvariable=cliente_var, postcommand=autocomplete)
 cliente_entry.grid(row=1, column=3)
+
 
 boleta_label = tk.Label(window, text="Boleta")
 boleta_label.grid(row=0, column=4)
@@ -608,6 +618,7 @@ cantidad_label = tk.Label(window, text="Cantidad")
 cantidad_label.grid(row=6, column=3)
 cantidad_entry = tk.Entry(window)
 cantidad_entry.grid(row=7, column=3)
+cantidad_entry.bind('<Return>', agregar_producto)
 
 var = tk.IntVar()
 var.trace('w', update_price)
@@ -659,7 +670,11 @@ cliente_entry.bind('<<ComboboxSelected>>', on_client_selection)
 agregar_button = tk.Button(window, text="Agregar", command=agregar_producto)
 agregar_button.grid(row=10, column=3)
 
-factura_treeview = ttk.Treeview(window, columns=('Producto', 'Tamaño', 'Cantidad', 'Precio', 'Total'), show='headings')
+style = ttk.Style()
+style.configure("mystyle.Treeview", font=('Arial', 13))  # sets the font size for the content to 13
+style.configure("mystyle.Treeview.Heading", font=('Arial', 15, 'bold'))  # sets the font size for the headings to 15 and makes them bold
+
+factura_treeview = ttk.Treeview(window, columns=('Producto', 'Tamaño', 'Cantidad', 'Precio', 'Total'), show='headings', style="mystyle.Treeview")
 factura_treeview.heading('Producto', text='Producto')
 factura_treeview.heading('Tamaño', text='Tamaño')
 factura_treeview.heading('Cantidad', text='Cantidad')
