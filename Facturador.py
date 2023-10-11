@@ -126,14 +126,14 @@ def calcular_total():
     for child in factura_treeview.get_children():
         total += float(factura_treeview.item(child, 'values')[4])
     total_label.config(text=f"Subtotal: {total}")
-    totalisimo = float(total) - float(saldo)
+    totalisimo = round(float(total) - float(saldo), 2)
     totalisimo_label.config(text=f"Total: {totalisimo}")
     pagoe = efectivo_var.get() # Get value from efectivo_var
     pagoch = cheque_var.get() # Get value from cheque_var
     pagoe = '0' if pagoe == '' else pagoe
     pagoch = '0' if pagoch == '' else pagoch
     pagot = float(pagoe) + float (pagoch)
-    saldot = -float(totalisimo) + float(pagot)
+    saldot = round(-float(totalisimo) + float(pagot), 2)
     saldo_final_label.config(text=f"Saldo final: {saldot}")
 def borrar_fila(event):
     selected = factura_treeview.selection()  # Obtener los items seleccionados
@@ -335,7 +335,7 @@ def create_and_print_invoice():
 
     totalisimo = totalisimo_label.cget("text")  # Obtener el texto del totalisimo
     totalisimo = totalisimo.split(" ")[1]  # Quitar la palabra "Total:"
-    c.drawRightString(left_margin + 280, y, "Total: {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
+    c.drawRightString(left_margin + 280, y, "Total a pagar: {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
 
     y -= 13
 
@@ -540,7 +540,7 @@ def create_and_print_invoice():
 
     totalisimo = totalisimo_label.cget("text")  # Obtener el texto del totalisimo
     totalisimo = totalisimo.split(" ")[1]  # Quitar la palabra "Total:"
-    c.drawRightString(left_margin + 280, y, "Total: {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
+    c.drawRightString(left_margin + 280, y, "Total a pagar: {:.2f}".format(float(totalisimo)))  # Imprimir el totalisimo
 
     y -= 13
 
@@ -559,12 +559,27 @@ def create_and_print_invoice():
     # Finalizar y guardar el PDF
     c.save()
 
+def print_pdf(pdf_path):
+    # Obtiene la impresora predeterminada
+    printer_name = win32print.GetDefaultPrinter()
+
+    # Lanza un proceso para imprimir el PDF
+    win32api.ShellExecute(0, "print", pdf_path, '/d:"%s"' % printer_name, ".", 0)
+
+
+def open_invoice():
+    global action
+    create_and_print_invoice()
+    
     # Abrir el PDF con el lector de PDF predeterminado
     subprocess.Popen(["boleta.pdf"], shell=True)
 
+def print_invoice():
+    global action
+    create_and_print_invoice()
 
     # Imprimir el PDF
-    #os.startfile("boleta.pdf", "print")
+    os.startfile("boleta.pdf", "print")
     
 import os
 from dbfread import DBF
@@ -642,7 +657,7 @@ def on_product_selection(event):
             precio = precio_original
             # print(f"precio_original: {precio_original}")  # Impresión de depuración
             if precio_bonificado_var.get() == 1:
-                precio = round(precio_original * 1.3, -1)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+                precio = float(math.ceil((float(precio_original) * 1.3) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
             PRECIOB_var.set(precio)
             codigo_var.set(row['CODIGO'])
             existencias_var.set(row['EXISTENCIA'])
@@ -680,7 +695,7 @@ checkbox = tk.Checkbutton(window, text='Publico',
 variable=precio_bonificado_var, command=on_checkbox_change)
 checkbox.grid(row=5, column=5)
 
-acreedor_deudor_label = tk.Label(window, text="Saldo")
+acreedor_deudor_label = tk.Label(window, text="Saldo anterior")
 acreedor_deudor_label.grid(row=9, column=4)
 acreedor_deudor_entry = tk.Entry(window, textvariable=acreedor_deudor_var)
 acreedor_deudor_var.trace("w", lambda name, index, mode, sv=acreedor_deudor_var: calcular_total())
@@ -746,8 +761,10 @@ saldo_final_label = tk.Label(window, text="Saldo final: 0")
 saldo_final_label.configure(font=('Arial', 15))
 saldo_final_label.grid(row=12, column=5)
 
-print_button = tk.Button(window, text="Imprimir boleta",
-command=create_and_print_invoice)
+print_button = tk.Button(window, text="Imprimir boleta", command=print_invoice)
 print_button.grid(row=13, column=5)
+
+open_button = tk.Button(window, text="Ver PDF", command=open_invoice)
+open_button.grid(row=13, column=4)
 
 window.mainloop()
