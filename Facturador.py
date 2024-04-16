@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinter import Grid
 from dbfread import DBF
+from tkinter.font import Font
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4, A6
 from reportlab.lib.units import cm
@@ -10,8 +11,14 @@ from reportlab.lib.colors import red, black, white
 from reportlab.pdfbase.pdfmetrics import stringWidth
 import math
 import os
+import sys
 
 window = tk.Tk()
+
+arial_font = Font(family='Arial', size=13)
+
+# Change the font for all Listboxes that are part of a Combobox
+window.option_add("*TCombobox*Listbox*Font", arial_font)
 
 window.title("Facturador")
 
@@ -26,6 +33,11 @@ existencias_var = tk.StringVar()
 codigo_var = tk.StringVar()
 efectivo_var = tk.StringVar()
 cheque_var = tk.StringVar()
+CUIT_var = tk.StringVar()
+
+def ejecutar_programa():
+   command = f'"{sys.executable}" "extractor.py"'
+   subprocess.Popen(command)
 
 def reset_program():
     producto_entry.delete(0, 'end')
@@ -43,6 +55,7 @@ def reset_program():
     efectivo_entry.delete(0, tk.END)
     cheque_entry.delete(0, tk.END)
     numero_entry.delete(0, tk.END)
+    cuit_entry.delete(0, tk.END)
     cliente_entry.focus_set()
 
     # Clear the Treeview
@@ -139,6 +152,7 @@ def borrar_fila(event):
     selected = factura_treeview.selection()  # Obtener los items seleccionados
     for item in selected:
         factura_treeview.delete(item)  # Eliminar el item del Treeview
+    calcular_total()
 
 
 import subprocess
@@ -306,7 +320,10 @@ def create_and_print_invoice():
 
     saldo = acreedor_deudor_var.get()  # Obtener el texto del saldo
     saldo = '0' if saldo == '' else saldo
-    c.drawRightString(left_margin + 280, y, "Saldo anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
+    if float(saldo) <= 0.01:
+       c.drawRightString(left_margin + 280, y, "Debe anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
+    else:
+       c.drawRightString(left_margin + 280, y, "A favor anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
 
     pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
     pago_ef = float(0) if pago_ef == '' else pago_ef
@@ -343,10 +360,13 @@ def create_and_print_invoice():
     saldo_fin = saldo_fin.split(" ")[2]  # Quitar la palabra "Total:"
     saldo_fin_float = float(saldo_fin)
     if saldo_fin_float != 0:
-        debt = "SALDO FINAL: {:.2f}".format(float(saldo_fin))
-        c.setFont("Helvetica-Bold", 9)
-        c.drawRightString(left_margin + 280, y, debt)
-        c.setFont("Helvetica", 9)
+       if saldo_fin_float <= 0:
+          debt = "SALDO FINAL DEUDOR: {:.2f}".format(float(saldo_fin))
+       elif saldo_fin_float > 0:
+          debt = "SALDO FINAL A FAVOR: {:.2f}".format(float(saldo_fin))
+       c.setFont("Helvetica-Bold", 9)
+       c.drawRightString(left_margin + 280, y, debt)
+       c.setFont("Helvetica", 9)
     else:
         c.setFont("Helvetica", 9)
         c.drawRightString(left_margin + 280, y, "SALDO FINAL: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
@@ -511,7 +531,10 @@ def create_and_print_invoice():
 
     saldo = acreedor_deudor_var.get()  # Obtener el texto del saldo
     saldo = '0' if saldo == '' else saldo
-    c.drawRightString(left_margin + 280, y, "Saldo anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
+    if float(saldo) <= 0.01:
+       c.drawRightString(left_margin + 280, y, "Debe anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
+    else:
+       c.drawRightString(left_margin + 280, y, "A favor anterior: {:.2f}".format(float(saldo)))  # Imprimir el saldo
 
     pago_ef = efectivo_var.get()  # Obtener el texto del pago en efectivo
     pago_ef = float(0) if pago_ef == '' else pago_ef
@@ -548,10 +571,13 @@ def create_and_print_invoice():
     saldo_fin = saldo_fin.split(" ")[2]  # Quitar la palabra "Total:"
     saldo_fin_float = float(saldo_fin)
     if saldo_fin_float != 0:
-        debt = "SALDO FINAL: {:.2f}".format(float(saldo_fin))
-        c.setFont("Helvetica-Bold", 9)
-        c.drawRightString(left_margin + 280, y, debt)
-        c.setFont("Helvetica", 9)
+       if saldo_fin_float <= 0:
+          debt = "SALDO FINAL DEUDOR: {:.2f}".format(float(saldo_fin))
+       elif saldo_fin_float > 0:
+          debt = "SALDO FINAL A FAVOR: {:.2f}".format(float(saldo_fin))
+       c.setFont("Helvetica-Bold", 9)
+       c.drawRightString(left_margin + 280, y, debt)
+       c.setFont("Helvetica", 9)
     else:
         c.setFont("Helvetica", 9)
         c.drawRightString(left_margin + 280, y, "SALDO FINAL: {:.2f}".format(float(saldo_fin)))  # Imprimir el saldo final
@@ -582,21 +608,27 @@ def print_invoice():
     os.startfile("boleta.pdf", "print")
     
 import os
+import shutil
 from dbfread import DBF
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
-dbf_file = os.path.join(current_dir, 'STOCK1.DBF')
 
-stock = DBF(dbf_file, encoding='cp850')
+# Lista de archivos DBF
+dbf_files = ['STOCK1.DBF', 'CLIPRO.DBF', 'PROVE.DBF']
+dbf_objects = []
 
- # Abrir y leer el archivo CLIPRO.DBF
-dbf_file2 = os.path.join(current_dir, 'CLIPRO.DBF')
-clipro = DBF(dbf_file2, encoding='cp850')
+for dbf_file in dbf_files:
+    original_dbf_file = os.path.join(current_dir, dbf_file)
+    temp_dbf_file = os.path.join(current_dir, f'temp_{dbf_file}')
 
+    # Hacer una copia temporal del archivo DBF
+    shutil.copyfile(original_dbf_file, temp_dbf_file)
 
-# Abrir y leer el archivo PROVE.DBF
-dbf_file3 = os.path.join(current_dir, 'PROVE.DBF')
-prove = DBF(dbf_file3, encoding='cp850')
+    # Abrir y leer la copia temporal
+    dbf_objects.append(DBF(temp_dbf_file, encoding='cp850'))
+
+# Ahora dbf_objects contiene los objetos DBF de los archivos temporales
+stock, clipro, prove = dbf_objects
 
 cliente_label = tk.Label(window, text="Nombre del Cliente")
 cliente_label.grid(row=0, column=3)
@@ -609,37 +641,50 @@ def update_title(*args):  # Function to update window title
 cliente_var.trace('w', update_title)
 
 cliente_entry = ttk.Combobox(window, textvariable=cliente_var, postcommand=autocomplete)
+cliente_entry.configure(font=('Arial', 13))
 cliente_entry.grid(row=1, column=3)
 
 
 boleta_label = tk.Label(window, text="Boleta")
 boleta_label.grid(row=0, column=4)
 boleta_entry = tk.Entry(window)
+boleta_entry.configure(font=('Arial', 13))
 boleta_entry.grid(row=1, column=4)
+
+cuit_label = tk.Label(window, text="CUIT")
+cuit_label.grid(row=0, column=1)
+cuit_entry = tk.Entry(window, textvariable=CUIT_var)
+cuit_entry.configure(font=('Arial', 13))
+cuit_entry.grid(row=1, column=1)
 
 numero_label = tk.Label(window, text="Numero de cliente")
 numero_label.grid(row=0, column=2)
 numero_entry = tk.Entry(window, textvariable=numero_var)
+numero_entry.configure(font=('Arial', 13))
 numero_entry.grid(row=1, column=2)
 
 codi_label = tk.Label(window, text="codigo")
 codi_label.grid(row=2, column=1)
 codi_entry = ttk.Combobox(window, textvariable=codigo_var)
+codi_entry.configure(font=('Arial', 13))
 codi_entry.grid(row=3, column=1)
 
 producto_label = tk.Label(window, text="Producto")
 producto_label.grid(row=2, column=3)
 producto_entry = ttk.Combobox(window, postcommand=autocomplete, width=50)
+producto_entry.configure(font=('Arial', 13))
 producto_entry.grid(row=3, column=2, columnspan=3)
 
 existencia_label = tk.Label(window, text="Stock")
 existencia_label.grid(row=4, column=2)
 existencia_entry = tk.Entry(window, textvariable=existencias_var)
+existencia_entry.configure(font=('Arial', 13))
 existencia_entry.grid(row=5, column=2)
 
 tamaño_label = tk.Label(window, text="Tamaño")
 tamaño_label.grid(row=4, column=3)
 tamaño_entry = tk.Entry(window, textvariable=TAMAÑO_var)
+tamaño_entry.configure(font=('Arial', 13))
 tamaño_entry.grid(row=5, column=3)
 
 def on_product_selection(event):
@@ -680,6 +725,7 @@ producto_entry.bind('<<ComboboxSelected>>', on_product_selection)
 cantidad_label = tk.Label(window, text="Cantidad")
 cantidad_label.grid(row=6, column=3)
 cantidad_entry = tk.Entry(window)
+cantidad_entry.configure(font=('Arial', 13))
 cantidad_entry.grid(row=7, column=3)
 cantidad_entry.bind('<Return>', agregar_producto)
 
@@ -689,6 +735,7 @@ var.trace('w', update_price)
 precio_label = tk.Label(window, text="Precio por unidad")
 precio_label.grid(row=4, column=4)
 precio_entry = tk.Entry(window, textvariable=PRECIOB_var)
+precio_entry.configure(font=('Arial', 13))
 precio_entry.grid(row=5, column=4)
 
 checkbox = tk.Checkbutton(window, text='Publico',
@@ -698,18 +745,21 @@ checkbox.grid(row=5, column=5)
 acreedor_deudor_label = tk.Label(window, text="Saldo anterior")
 acreedor_deudor_label.grid(row=9, column=4)
 acreedor_deudor_entry = tk.Entry(window, textvariable=acreedor_deudor_var)
+acreedor_deudor_entry.configure(font=('Arial', 13))
 acreedor_deudor_var.trace("w", lambda name, index, mode, sv=acreedor_deudor_var: calcular_total())
 acreedor_deudor_entry.grid(row=10, column=4)
 
 efectivo_label = tk.Label(window, text="Efectivo")
 efectivo_label.grid(row=9, column=2)
 efectivo_entry = tk.Entry(window, textvariable=efectivo_var)
+efectivo_entry.configure(font=('Arial', 13))
 efectivo_var.trace("w", lambda name, index, mode, sv=efectivo_var: calcular_total())
 efectivo_entry.grid(row=10, column=2)
 
 cheque_label = tk.Label(window, text="Cheque")
 cheque_label.grid(row=9, column=1)
 cheque_entry = tk.Entry(window, textvariable=cheque_var)
+cheque_entry.configure(font=('Arial', 13))
 cheque_var.trace("w", lambda name, index, mode, sv=cheque_var: calcular_total())
 cheque_entry.grid(row=10, column=1)
 
@@ -723,6 +773,7 @@ def on_client_selection(event):
             numero_var.set(row['NUMERO'])
             acreedor_var.set(row['ACREEDOR'])
             deudor_var.set(row['DEUDOR'])
+            CUIT_var.set(row['NCUIT'])
             acreedor_deudor_var.set(float(acreedor_var.get()) - float(deudor_var.get()))
             break
     producto_entry.focus_set()
@@ -766,5 +817,8 @@ print_button.grid(row=13, column=5)
 
 open_button = tk.Button(window, text="Ver PDF", command=open_invoice)
 open_button.grid(row=13, column=4)
+
+export_button = tk.Button(window, text="Exportar boleta", command=ejecutar_programa)
+export_button.grid(row=13, column=3)
 
 window.mainloop()
