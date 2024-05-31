@@ -24,6 +24,7 @@ window.title("Facturador")
 
 PRECIOB_var = tk.StringVar()
 precio_bonificado_var = tk.IntVar()
+precio_iva_var = tk.IntVar()
 TAMAÑO_var = tk.StringVar()
 numero_var = tk.StringVar()
 acreedor_var = tk.StringVar()
@@ -76,18 +77,34 @@ def update_price(*args):
         precio_entry.insert(0, str(new_price))
 
 def autocomplete(event=None):
-    current_text = producto_entry.get().lower()  # Convert the input text to lowercase
-    # Convert product names to lowercase before comparison
+    current_text = producto_entry.get().lower()
     suggestions = [row for row in stock if current_text in row['NOMBRE'].lower()]
     if suggestions:
-        producto_entry.set('')  # Clear the current content
-        suggestions_sorted = sorted(suggestions, key=lambda row: row['NOMBRE'])  # Sort the suggestions alphabetically
+        suggestions_sorted = sorted(suggestions, key=lambda row: row['NOMBRE'])
 
-        # Concatenate the name and size in the suggestions
-        suggestions_with_size = [f"{row['NOMBRE']}--{row['ENVASE']}" for row in suggestions_sorted]
+        suggestions_with_size_and_price = []
+        for row in suggestions_sorted:
+            precio = float(row['PRECIOB'])  # Empezamos con el precio base
 
-        producto_entry['values'] = suggestions_with_size  # Set the new values
-        #producto_entry.set(suggestions_with_size[0])  # Set the first suggestion as the current value
+            if precio_bonificado_var.get() == 1:
+                precio = float(math.ceil((precio * 1.3) / 10.0) * 10) 
+            if precio_iva_var.get() == 1:
+                precio = (precio * 1.21)  
+            if precio_iva_var.get() == 1 and precio_bonificado_var.get() == 1:
+                precio = float(math.ceil((precio * 1.3) / 10.0) * 10) * 1.21 
+
+            suggestions_with_size_and_price.append(
+                f"{row['NOMBRE']}--{row['ENVASE']} - ${precio:.2f}"
+            )
+
+        producto_entry['values'] = suggestions_with_size_and_price
+
+        # Sugerencias con solo nombre y envase para autocompletar
+        suggestions_with_size = [
+            f"{row['NOMBRE']}--{row['ENVASE']}" 
+            for row in suggestions_sorted
+        ]
+
 
     cli_text = cliente_entry.get().lower()
     # Now it will also match substrings in the 'RAZON' field
@@ -690,7 +707,8 @@ tamaño_entry.grid(row=5, column=3)
 def on_product_selection(event):
     global precio, precio_original
     # Obtiene el producto seleccionado
-    selected_product = producto_entry.get()
+    selected_product = producto_entry.get().split(" - ")[0]
+    producto_entry.set(selected_product)
 
     # Divide la cadena seleccionada en el nombre del producto y su tamaño
     selected_name, selected_size = selected_product.split('--', 1)
@@ -703,6 +721,10 @@ def on_product_selection(event):
             # print(f"precio_original: {precio_original}")  # Impresión de depuración
             if precio_bonificado_var.get() == 1:
                 precio = float(math.ceil((float(precio_original) * 1.3) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+            if precio_iva_var.get() == 1:
+                precio = (float(precio_original*100) * 1.21)/100 # Aumenta el precio en un 21%
+            if precio_iva_var.get() == 1 and precio_bonificado_var.get() == 1:
+                precio = float(math.ceil((float(precio_original) * 1.3) / 10.0) * 10) * 1.21  # Aumenta el precio en un 30% y redondea a la decena más cercana
             PRECIOB_var.set(precio)
             codigo_var.set(row['CODIGO'])
             existencias_var.set(row['EXISTENCIA'])
@@ -712,8 +734,13 @@ def on_product_selection(event):
 
 def on_checkbox_change():
     global precio
-    if precio_bonificado_var.get() == 1:
-        precio = float(math.ceil((float(precio_entry.get()) * 1.3) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+    if precio_bonificado_var.get() == 1 and precio_iva_var.get() == 0:
+        precio = float(math.ceil((float(precio_original) * 1.3) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+    elif precio_iva_var.get() == 1 and precio_bonificado_var.get() == 0:
+         #precio = float(precio_original) * 1.21
+        precio = (float(precio_original*100) * 1.21)/100 # Aumenta el precio en un 21%  # Aumenta el precio en un 30% y redondea a la decena más cercana
+    elif precio_iva_var.get() == 1 and precio_bonificado_var.get() == 1:
+        precio = float(math.ceil((float(precio_original) * 1.3) / 10.0) * 10) * 1.21  # Aumenta el precio en un 30% y redondea a la decena más cercana
     else:
         precio = precio_original  # Restaura el precio original
     # print(f"precio: {precio}")  # Impresión de depuración
@@ -741,6 +768,10 @@ precio_entry.grid(row=5, column=4)
 checkbox = tk.Checkbutton(window, text='Publico',
 variable=precio_bonificado_var, command=on_checkbox_change)
 checkbox.grid(row=5, column=5)
+
+checkboxiva = tk.Checkbutton(window, text='IVA',
+variable=precio_iva_var, command=on_checkbox_change)
+checkboxiva.grid(row=6, column=5)
 
 acreedor_deudor_label = tk.Label(window, text="Saldo anterior")
 acreedor_deudor_label.grid(row=9, column=4)
@@ -799,6 +830,44 @@ scrollbar = ttk.Scrollbar(window, orient="vertical", command=factura_treeview.yv
 scrollbar.grid(row=11, column=7, sticky="ns")
 factura_treeview.configure(yscrollcommand=scrollbar.set)
 factura_treeview.bind('<Delete>', borrar_fila)
+
+def editar_fila(event):
+    """Opens a popup for editing the selected row."""
+    item = factura_treeview.selection()
+    if item:
+        # Get values from selected row
+        values = factura_treeview.item(item, "values")
+        producto, tamaño, cantidad, precio, total = values
+
+        # Create popup window
+        popup = tk.Toplevel(window)
+        popup.title("Editar Fila")
+
+        # Labels and entry fields
+        labels = ["Producto:", "Tamaño:", "Cantidad:", "Precio:"]
+        entries = []
+        for i, label_text in enumerate(labels):
+            label = ttk.Label(popup, text=label_text)
+            label.grid(row=i, column=0, padx=5, pady=5)
+            entry = ttk.Entry(popup)
+            entry.insert(0, values[i])  # Populate entry with current value
+            entry.grid(row=i, column=1, padx=5, pady=5)
+            entries.append(entry)
+
+        # Update button
+        def update_row():
+            new_values = [entry.get() for entry in entries]
+            # Update values in treeview
+            factura_treeview.item(item, values=new_values + [str(float(new_values[2]) * float(new_values[3]))])
+            popup.destroy()
+            calcular_total()
+
+        update_button = ttk.Button(popup, text="Actualizar", command=update_row)
+        update_button.grid(row=4, column=0, columnspan=2, pady=10)
+        
+
+# Bind double-click to edit row
+factura_treeview.bind('<Double-Button-1>', editar_fila) 
 
 total_label = tk.Label(window, text="Subtotal: 0")
 total_label.configure(font=('Arial', 15))
