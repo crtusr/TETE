@@ -24,6 +24,7 @@ window.title("Facturador")
 
 PRECIOB_var = tk.StringVar()
 precio_bonificado_var = tk.IntVar()
+precio_iva_var = tk.IntVar()
 TAMAÑO_var = tk.StringVar()
 numero_var = tk.StringVar()
 acreedor_var = tk.StringVar()
@@ -70,7 +71,7 @@ reset_button.grid(row=0, column=5)
 def update_price(*args):
     if var.get():
         # Aumenta el precio en un 30% y redondea hacia arriba a las decenas más cercanas
-        new_price = math.ceil((float(precio_entry.get()) * 2 * 1.21) / 10.0) * 10
+        new_price = math.ceil((float(precio_entry.get()) * 1.3) / 10.0) * 10
         precio_entry.delete(0, tk.END)
         print(str(new_price))
         precio_entry.insert(0, str(new_price))
@@ -702,7 +703,11 @@ def on_product_selection(event):
             precio = precio_original
             # print(f"precio_original: {precio_original}")  # Impresión de depuración
             if precio_bonificado_var.get() == 1:
-                precio = float(math.ceil((float(precio_original) * 2 * 1.21) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+                precio = float(math.ceil((float(precio_original) * 1.3) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+            if precio_iva_var.get() == 1:
+                precio = (float(precio_original*100) * 1.21)/100 # Aumenta el precio en un 21%
+            if precio_iva_var.get() == 1 and precio_bonificado_var.get() == 1:
+                precio = float(math.ceil((float(precio_original) * 1.3) / 10.0) * 10) * 1.21  # Aumenta el precio en un 30% y redondea a la decena más cercana
             PRECIOB_var.set(precio)
             codigo_var.set(row['CODIGO'])
             existencias_var.set(row['EXISTENCIA'])
@@ -712,8 +717,13 @@ def on_product_selection(event):
 
 def on_checkbox_change():
     global precio
-    if precio_bonificado_var.get() == 1:
-        precio = float(math.ceil((float(precio_entry.get()) * 2 * 1.21) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+    if precio_bonificado_var.get() == 1 and precio_iva_var.get() == 0:
+        precio = float(math.ceil((float(precio_original) * 2) / 10.0) * 10)  # Aumenta el precio en un 30% y redondea a la decena más cercana
+    elif precio_iva_var.get() == 1 and precio_bonificado_var.get() == 0:
+         #precio = float(precio_original) * 1.21
+        precio = (float(precio_original*100) * 1.21)/100 # Aumenta el precio en un 21%  # Aumenta el precio en un 30% y redondea a la decena más cercana
+    elif precio_iva_var.get() == 1 and precio_bonificado_var.get() == 1:
+        precio = float(math.ceil((float(precio_original) * 2) / 10.0) * 10) * 1.21  # Aumenta el precio en un 30% y redondea a la decena más cercana
     else:
         precio = precio_original  # Restaura el precio original
     # print(f"precio: {precio}")  # Impresión de depuración
@@ -741,6 +751,10 @@ precio_entry.grid(row=5, column=4)
 checkbox = tk.Checkbutton(window, text='Publico',
 variable=precio_bonificado_var, command=on_checkbox_change)
 checkbox.grid(row=5, column=5)
+
+checkboxiva = tk.Checkbutton(window, text='IVA',
+variable=precio_iva_var, command=on_checkbox_change)
+checkboxiva.grid(row=6, column=5)
 
 acreedor_deudor_label = tk.Label(window, text="Saldo anterior")
 acreedor_deudor_label.grid(row=9, column=4)
@@ -799,6 +813,44 @@ scrollbar = ttk.Scrollbar(window, orient="vertical", command=factura_treeview.yv
 scrollbar.grid(row=11, column=7, sticky="ns")
 factura_treeview.configure(yscrollcommand=scrollbar.set)
 factura_treeview.bind('<Delete>', borrar_fila)
+
+def editar_fila(event):
+    """Opens a popup for editing the selected row."""
+    item = factura_treeview.selection()
+    if item:
+        # Get values from selected row
+        values = factura_treeview.item(item, "values")
+        producto, tamaño, cantidad, precio, total = values
+
+        # Create popup window
+        popup = tk.Toplevel(window)
+        popup.title("Editar Fila")
+
+        # Labels and entry fields
+        labels = ["Producto:", "Tamaño:", "Cantidad:", "Precio:"]
+        entries = []
+        for i, label_text in enumerate(labels):
+            label = ttk.Label(popup, text=label_text)
+            label.grid(row=i, column=0, padx=5, pady=5)
+            entry = ttk.Entry(popup)
+            entry.insert(0, values[i])  # Populate entry with current value
+            entry.grid(row=i, column=1, padx=5, pady=5)
+            entries.append(entry)
+
+        # Update button
+        def update_row():
+            new_values = [entry.get() for entry in entries]
+            # Update values in treeview
+            factura_treeview.item(item, values=new_values + [str(float(new_values[2]) * float(new_values[3]))])
+            popup.destroy()
+            calcular_total()
+
+        update_button = ttk.Button(popup, text="Actualizar", command=update_row)
+        update_button.grid(row=4, column=0, columnspan=2, pady=10)
+        
+
+# Bind double-click to edit row
+factura_treeview.bind('<Double-Button-1>', editar_fila) 
 
 total_label = tk.Label(window, text="Subtotal: 0")
 total_label.configure(font=('Arial', 15))
