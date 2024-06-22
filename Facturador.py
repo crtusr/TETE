@@ -35,6 +35,8 @@ codigo_var = tk.StringVar()
 efectivo_var = tk.StringVar()
 cheque_var = tk.StringVar()
 CUIT_var = tk.StringVar()
+numero_fila_var = tk.IntVar()
+
 
 def ejecutar_programa():
    command = f'"{sys.executable}" "extractor.py"'
@@ -57,6 +59,7 @@ def reset_program():
     cheque_entry.delete(0, tk.END)
     numero_entry.delete(0, tk.END)
     cuit_entry.delete(0, tk.END)
+    numero_fila_var.set(0)
     cliente_entry.focus_set()
 
     # Clear the Treeview
@@ -129,12 +132,16 @@ codificaciones.'''
 def agregar_producto(event=None):
     try:
         global precio
+        numero_fila = numero_fila_var.get()  # Llamar al método get para obtener el valor
+        codigo_producto = codigo_var.get()  # Llamar al método get para obtener el valor
         cantidad = float(cantidad_entry.get())
         producto = producto_entry.get()
         tamaño = tamaño_entry.get()  # Obtén el valor de tamaño_entry
         precio = float(precio_entry.get())
         total_producto = float(cantidad) * float(precio)
-        factura_treeview.insert('', 'end', values=(producto, tamaño, cantidad, precio, total_producto))
+        numero_fila = int(numero_fila) + 1  # Convertir a entero y sumar 1
+        numero_fila_var.set(numero_fila)
+        factura_treeview.insert('', 'end', values=(numero_fila, codigo_producto, producto, tamaño, cantidad, precio, total_producto, numero_fila))
         calcular_total()
         precio_entry.delete(0, tk.END)
         existencia_entry.delete(0, tk.END)
@@ -154,7 +161,7 @@ def calcular_total():
     saldo = '0' if saldo == '' else saldo
     saldot = 0.0
     for child in factura_treeview.get_children():
-        total += float(factura_treeview.item(child, 'values')[4])
+        total += float(factura_treeview.item(child, 'values')[6])
     total_label.config(text=f"Subtotal: {total}")
     totalisimo = round(float(total) - float(saldo), 2)
     totalisimo_label.config(text=f"Total: {totalisimo}")
@@ -167,6 +174,9 @@ def calcular_total():
     saldo_final_label.config(text=f"Saldo final: {saldot}")
 def borrar_fila(event):
     selected = factura_treeview.selection()  # Obtener los items seleccionados
+    numero_fila = numero_fila_var.get()
+    numero_fila -= 1
+    numero_fila_var.set(numero_fila)
     for item in selected:
         factura_treeview.delete(item)  # Eliminar el item del Treeview
     calcular_total()
@@ -217,14 +227,14 @@ def create_and_print_invoice():
         values = factura_treeview.item(row, 'values')
 
         # Imprimir los valores en el PDF
-        c.drawString(left_margin + 10, y, str(values[0]))       # Producto
-        c.drawRightString(left_margin + 190, y, str(values[2]))  # Cantidad
-        c.drawRightString(left_margin + 230, y, "{:.2f}".format(float(values[3])))  # Precio
-        c.drawRightString(left_margin + 280, y, "{:.2f}".format(float(values[4])))  # Total
+        c.drawString(left_margin + 10, y, str(values[2]))       # Producto
+        c.drawRightString(left_margin + 190, y, str(values[4]))  # Cantidad
+        c.drawRightString(left_margin + 230, y, "{:.2f}".format(float(values[5])))  # Precio
+        c.drawRightString(left_margin + 280, y, "{:.2f}".format(float(values[6])))  # Total
 
         # Sumar el valor a la variable suma
-        suma += float(values[4])
-        suma_total += float(values[4])
+        suma += float(values[6])
+        suma_total += float(values[6])
 
         # Mover la posición y hacia abajo para la siguiente fila
         y -= 13
@@ -427,14 +437,14 @@ def create_and_print_invoice():
         values = factura_treeview.item(row, 'values')
 
         # Imprimir los valores en el PDF
-        c.drawString(left_margin + 10, y, str(values[0]))       # Producto
-        c.drawRightString(left_margin + 190, y, str(values[2]))  # Cantidad
-        c.drawRightString(left_margin + 230, y, "{:.2f}".format(float(values[3])))  # Precio
-        c.drawRightString(left_margin + 280, y, "{:.2f}".format(float(values[4])))  # Total
+        c.drawString(left_margin + 10, y, str(values[2]))       # Producto
+        c.drawRightString(left_margin + 190, y, str(values[4]))  # Cantidad
+        c.drawRightString(left_margin + 230, y, "{:.2f}".format(float(values[5])))  # Precio
+        c.drawRightString(left_margin + 280, y, "{:.2f}".format(float(values[6])))  # Total
 
         # Sumar el valor a la variable suma
-        suma += float(values[4])
-        suma_total += float(values[4])
+        suma += float(values[6])
+        suma_total += float(values[6])
 
         # Mover la posición y hacia abajo para la siguiente fila
         y -= 13
@@ -819,7 +829,16 @@ style = ttk.Style()
 style.configure("mystyle.Treeview", font=('Arial', 13))  # sets the font size for the content to 13
 style.configure("mystyle.Treeview.Heading", font=('Arial', 15, 'bold'))  # sets the font size for the headings to 15 and makes them bold
 
-factura_treeview = ttk.Treeview(window, columns=('Producto', 'Tamaño', 'Cantidad', 'Precio', 'Total'), show='headings', style="mystyle.Treeview")
+factura_treeview = ttk.Treeview(window, columns=('Fila', 'Codigo', 'Producto', 'Tamaño', 'Cantidad', 'Precio', 'Total'), show='headings', style="mystyle.Treeview")
+factura_treeview.column('Codigo', width=150)
+factura_treeview.column('Producto', width=500)
+factura_treeview.column('Tamaño', width=100)
+factura_treeview.column('Cantidad', width=150)
+factura_treeview.column('Precio', width=150)
+factura_treeview.column('Total', width=150)
+factura_treeview.column('Fila', width=40) 
+factura_treeview.heading('Fila', text='Fila')
+factura_treeview.heading('Codigo', text='Codigo')
 factura_treeview.heading('Producto', text='Producto')
 factura_treeview.heading('Tamaño', text='Tamaño')
 factura_treeview.heading('Cantidad', text='Cantidad')
@@ -837,14 +856,14 @@ def editar_fila(event):
     if item:
         # Get values from selected row
         values = factura_treeview.item(item, "values")
-        producto, tamaño, cantidad, precio, total = values
+        fila, codigo, producto, tamaño, cantidad, precio, total, dummy = values
 
         # Create popup window
         popup = tk.Toplevel(window)
         popup.title("Editar Fila")
 
         # Labels and entry fields
-        labels = ["Producto:", "Tamaño:", "Cantidad:", "Precio:"]
+        labels = ["fila", "Código:", "Producto:", "Tamaño:", "Cantidad:", "Precio:"]
         entries = []
         for i, label_text in enumerate(labels):
             label = ttk.Label(popup, text=label_text)
@@ -856,15 +875,23 @@ def editar_fila(event):
 
         # Update button
         def update_row():
-            new_values = [entry.get() for entry in entries]
+            new_fila = entries[0].get()
+            new_codigo = entries[1].get()
+            new_producto = entries[2].get()
+            new_tamaño = entries[3].get()
+            new_cantidad = entries[4].get()
+            new_precio = entries[5].get()
+            
+            # Calculate total and fila
+            new_total = str(float(new_cantidad) * float(new_precio))
+
             # Update values in treeview
-            factura_treeview.item(item, values=new_values + [str(float(new_values[2]) * float(new_values[3]))])
+            factura_treeview.item(item, values=(new_fila, new_codigo, new_producto, new_tamaño, new_cantidad, new_precio, new_total, dummy))
             popup.destroy()
             calcular_total()
 
         update_button = ttk.Button(popup, text="Actualizar", command=update_row)
-        update_button.grid(row=4, column=0, columnspan=2, pady=10)
-        
+        update_button.grid(row=6, column=0, columnspan=2, pady=10)
 
 # Bind double-click to edit row
 factura_treeview.bind('<Double-Button-1>', editar_fila) 
