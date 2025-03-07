@@ -1,3 +1,7 @@
+/*
+Esta es una prueba para implementar la entreda en campos, para aÃ±adir a inputfields.c
+*/
+
 #include <curses.h>
 #include <string.h>
 #include <stdlib.h>
@@ -16,11 +20,11 @@ int main() {
     // Inicializar los campos de entrada
     init_input_field(&fields[0], "Nombre: ", 20, false, 10, 5);
     init_input_field(&fields[1], "Apellido: ", 20, false, 10, 7);
-    init_input_field(&fields[2], "Contraseña: ", 15, true, 10, 9);
+    init_input_field(&fields[2], "ContraseÃ±a: ", 15, true, 10, 9);
 
     // Bucle principal de entrada
     while (1) {
-        clear(); // Limpiar la pantalla en cada iteración (opcional, pero útil para redibujar todo)
+        clear();
 
         // Dibujar todos los campos de entrada
         for (int i = 0; i < MAX_FIELDS; i++) {
@@ -35,7 +39,7 @@ int main() {
 	
 
         if (ch == KEY_ENTER || ch == '\n' || ch == '\r') {
-            if (current_field_index == MAX_FIELDS - 1) { // Si ENTER en el último campo, salir
+            if (current_field_index == MAX_FIELDS - 1) { // Si ENTER en el Ãºltimo campo, salir
                 break;
             } else {
                 current_field_index++; // Si ENTER, ir al siguiente campo (opcional)
@@ -43,12 +47,12 @@ int main() {
         } else if (ch == KEY_UP) {
             current_field_index--;
             if (current_field_index < 0) {
-                current_field_index = MAX_FIELDS - 1; // Volver al último campo si llega al principio
+                current_field_index = MAX_FIELDS - 1; // Volver al Ãºltimo campo
             }
         } else if (ch == KEY_DOWN) {
             current_field_index++;
             if (current_field_index >= MAX_FIELDS) {
-                current_field_index = 0; // Volver al primer campo si llega al final
+                current_field_index = 0; // Volver al primer campo
             }
         } else if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) {
             handle_backspace(&fields[current_field_index]);
