@@ -14,9 +14,9 @@ int main() {
     int num_fields = MAX_FIELDS; // Explicitly set number of fields
 
     // Initialize input fields
-    init_input_field(&fields[0], "Nombre: ", 20, false, 10, 5, STRING);
-    init_input_field(&fields[1], "Apellido: ", 20, false, 10, 7, INTEGER);
-    init_input_field(&fields[2], "Contraseña: ", 15, true, 10, 9, FLOAT);
+    init_input_field(&fields[0], "STRING: ", 20, false, 10, 5, STRING);
+    init_input_field(&fields[1], "INTEGER: ", 20, false, 10, 7, INTEGER);
+    init_input_field(&fields[2], "FLOAT: ", 15, false, 10, 9, FLOAT);
 
     input_fields_loop(fields, num_fields); // Call the input loop function from inputfields.c
 
