@@ -61,9 +61,12 @@ void handle_input_char(InputField* field, int ch) {
             }
             break;
         case INTEGER:
-            if (isdigit(ch)) {  // Use isdigit for digits
-                insert_char(field, (char)ch);
-            }
+		if (field->cursor_pos == 0 && ch == '-') {
+			insert_char(field, (char)ch);
+		}
+            	if (isdigit(ch)) {  // Use isdigit for digits
+                	insert_char(field, (char)ch);
+            	}
             break;
         case FLOAT:
             // Improved FLOAT handling (allows digits, '.', '+', '-')
