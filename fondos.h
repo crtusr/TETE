@@ -11,4 +11,6 @@ void menprov();
 
 void operaciones();
 
+void consultas_op();
+
 #endif
