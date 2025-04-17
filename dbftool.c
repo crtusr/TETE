@@ -47,7 +47,7 @@ void store_header_data(header *head, FILE *file, int i) {
 
 	fseek(file, 0, SEEK_SET);
 
-	//fread(variable donde vas a guardar, tamaño del dato que vas a leer, cantidad de datos que vas a leer, puntero al archivo)
+	//fread(variable donde vas a guardar, tamaÃ±o del dato que vas a leer, cantidad de datos que vas a leer, puntero al archivo)
 
 	fread(buffer, 1, sizeof(head->dbfversion), file); //this should be interpreted as 8 1bit flags
 	memcpy((&head[i].dbfversion), buffer, sizeof(head->dbfversion));
@@ -192,7 +192,7 @@ int get_index(char* campo, char* string, FILE* file, header* head, descriptor* d
 
 	//leo el valor del campo y comparo con el string que quiero buscar
 
-	while(strncmp(string, buffer, strlen(string)) || rindex > head[0].nofrecords) {
+	while(strncmp(string, buffer, strlen(string)) != 0 && rindex < head[0].nofrecords) {
 
 	fread(buffer, descr[i].length, 1, file);
 
@@ -242,7 +242,7 @@ int get_data(char* buffer, int indice, char* campo, FILE* file, header* head, de
 
 	fseek(file, offset + 1, SEEK_CUR);
 
-	//avanzo en los registros en (tamaño en bytes del registro) * el indice obtenido 
+	//avanzo en los registros en (tamaÃ±o en bytes del registro) * el indice obtenido 
 	
 	fseek(file, head[0].record_bytes * indice , SEEK_CUR);
 
