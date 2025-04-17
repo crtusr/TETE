@@ -214,65 +214,42 @@ int consulta_compra(){
 
 	store_descriptor_data(compras_descr, compras_ptr);
 
-	indice = get_index("OPERAC", entrada[0].input_buffer, compras_ptr, compras_head, 
+	indice = get_index("OPERAC", entrada[0].input_buffer, compras_ptr, compras_head, compras_descr);
 
-compras_descr);
-
-	get_data(buffer, indice, ctasctes_descr[0].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[0].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(2, 17, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[1].fieldname, compras_ptr, compras_head, 
+	get_data(buffer, indice, ctasctes_descr[1].fieldname, compras_ptr, compras_head, compras_descr);
+	mvprintw(2, 35, "%c%c-%c%c-%c%c", 
+		buffer[6], buffer[7], 
+		buffer[4], buffer[5], 
+		buffer[2], buffer[3]);
 
-compras_descr);
-	mvprintw(2, 35, "%c%c-%c%c-%c%c", buffer[6], buffer[7], buffer[4], buffer[5], buffer[2], buffer
-
-[3]);
-
-	get_data(buffer, indice, ctasctes_descr[2].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[2].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(2, 60, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[3].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[3].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(4, 19, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[4].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[4].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(4, 48, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[5].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[5].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(9, 48, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[6].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[6].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(10, 48, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[7].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[7].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(17, 11, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[8].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[8].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(17, 28, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[9].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[9].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(17, 46, "%s", buffer);
 
-	get_data(buffer, indice, ctasctes_descr[10].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
+	get_data(buffer, indice, ctasctes_descr[10].fieldname, compras_ptr, compras_head, compras_descr);
 	mvprintw(17, 66, "%s", buffer);
 
 	
@@ -290,6 +267,5 @@ entrada[0].input_buffer[1], entrada[0].input_buffer[2], entrada[0].input_buffer[
 		return 1;
 	}	
 	getch();
-
 	return 0;
 }
