@@ -161,7 +161,7 @@ int consulta_operacion(){
 		perror("error al cerrar el archivo");
 		
 		return 1;
-	
+	}
 	getch();
 
 	return 0;
@@ -288,7 +288,7 @@ entrada[0].input_buffer[1], entrada[0].input_buffer[2], entrada[0].input_buffer[
 		perror("error al cerrar el archivo");
 		
 		return 1;
-	
+	}	
 	getch();
 
 	return 0;
