@@ -25,7 +25,8 @@
 
 
 
-void sto_consulta(){
+void sto_consulta()
+	{
 	
 	header stockhead[1];
 	descriptor stockdescr[MAX_DBF_FIELDS];
