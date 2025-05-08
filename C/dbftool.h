@@ -61,5 +61,6 @@ void store_header_data(header *head, FILE *file, int i);
 void store_descriptor_data(descriptor *fields, FILE *file);
 int get_index(char* campo, char* string, FILE* file, header* head, descriptor* descr);
 int get_data(char* buffer, int indice, char* campo, FILE* file, header* head, descriptor* descr);
+int get_record(char* buffer, int indice, FILE* file, header* head, descriptor* descr);
 
 #endif
