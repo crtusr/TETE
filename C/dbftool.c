@@ -194,13 +194,13 @@ int get_index(char* campo, char* string, FILE* file, header* head, descriptor* d
 
 	while(strncmp(string, buffer, strlen(string)) != 0 && rindex < head[0].nofrecords) {
 
-	fread(buffer, descr[i].length, 1, file);
+		fread(buffer, descr[i].length, 1, file);
 
-	//avanzo en header[n].record_bytes - (descriptor[indice del campo].length)
+		//avanzo en header[n].record_bytes - (descriptor[indice del campo].length)
 
-	fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
+		fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 
-	rindex++;
+		rindex++;
 	
 	}
 	
@@ -249,5 +249,32 @@ int get_data(char* buffer, int indice, char* campo, FILE* file, header* head, de
 	fread(buffer, descr[i].length, 1, file);
 
 	return 0;
+}
+
+int get_record(char* buffer, int indice, FILE* file, header* head, descriptor* descr)
+{
+	if (indice == -1) 
+	{
+		perror("indice invalido");
+		return -1;
+	}
 	
+	//busco el indice del campo
+
+	int i = 0;
+	int j = 0;
+	int offset = 0;
+	//buffer[MAX_FIELD_LENGTH];
+
+	//pongo el cursor en el lugar donde compienzan los registros
+
+	fseek(file, head[0].header_bytes, SEEK_SET);
+
+	//avanzo en los registros en (tamaño en bytes del registro) * el indice obtenido 
+	
+	fseek(file, head[0].record_bytes * indice , SEEK_CUR);
+
+	fread(buffer, head[0].record_bytes, 1, file);
+
+	return 0;
 }
