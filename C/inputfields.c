@@ -6,7 +6,7 @@
 #include "inputfields.h"
 
 void init_input_field(InputField* field, const char* prompt, int max_length, bool password_mode, int start_x, int start_y, int type) {
-    field->prompt = strdup(prompt); // Usar strdup para asignar memoria al prompt
+    field->prompt = strdup(prompt);
     field->max_length = max_length;
     field->password_mode = password_mode;
     field->start_x = start_x;
@@ -17,22 +17,27 @@ void init_input_field(InputField* field, const char* prompt, int max_length, boo
     field->type = type;
 }
 
-void draw_input_field(const InputField* field) {
+void draw_input_field(const InputField* field) 
+{
     	move(field->start_y, field->start_x);
-    	clrtoeol();
+    	//clrtoeol();
    	mvprintw(field->start_y, field->start_x, "%s", field->prompt);
 	attron(A_REVERSE);
-	for (int i = 0; i < field->max_length; i++) {
+	for (int i = 0; i < field->max_length; i++) 
+	{
 		addch(' ');
 	}
 	move(field->start_y, field->start_x + strlen(field->prompt));
-	for (int i = 0; i < field->count; i++) {
-        	if (field->password_mode) {
+	for (int i = 0; i < field->count; i++) 
+	{
+        	if (field->password_mode) 
+		{
             		addch('*');
-        	} else {
+        	} 
+		else
+		{
             		addch(field->input_buffer[i]);
         	}
-	
     	}
 attroff(A_REVERSE);
     move(field->start_y, field->start_x + strlen(field->prompt) + field->cursor_pos); // Posicionar el cursor
@@ -114,12 +119,13 @@ void handle_cursor_right(InputField* field) {
     }
 }
 
-void input_fields_loop(InputField fields[], int num_fields) {
+void input_fields_loop(InputField fields[], int num_fields,  void (*background)(void)) 
+{
     int current_field_index = 0;
-    while (1) {
-        clear();
-
-        for (int i = 0; i < num_fields; i++) {
+    while (1) {	    
+    
+        for (int i = 0; i < num_fields; i++) 
+	{
             draw_input_field(&fields[i]);
         }
 
@@ -129,29 +135,47 @@ void input_fields_loop(InputField fields[], int num_fields) {
 
         int ch = getch();
 
-        if (ch == KEY_ENTER || ch == '\n' || ch == '\r' || ch == PADENTER) {
-            if (current_field_index == num_fields - 1) {
+        if (ch == KEY_ENTER || ch == '\n' || ch == '\r' || ch == PADENTER) 
+	{
+            if (current_field_index == num_fields - 1) 
+	    {
                 break; // Exit loop after last field
-            } else {
+            } 
+	    else 
+	    {
                 current_field_index++;
             }
-        } else if (ch == KEY_UP) {
+        } 
+	else if (ch == KEY_UP) 
+	{
             current_field_index--;
-            if (current_field_index < 0) {
-                current_field_index = num_fields - 1;
-            }
-        } else if (ch == KEY_DOWN) {
-            current_field_index++;
-            if (current_field_index >= num_fields) {
+            if (current_field_index < 0) 
+	    {
                 current_field_index = 0;
             }
-        } else if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) {
+        } 
+	else if (ch == KEY_DOWN) 
+	{
+            current_field_index++;
+            if (current_field_index >= num_fields) 
+	    {
+                current_field_index = num_fields;
+            }
+        } 
+	else if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) 
+	{
             handle_backspace(&fields[current_field_index]);
-        } else if (ch == KEY_LEFT) {
+        } 
+	else if (ch == KEY_LEFT) 
+	{
             handle_cursor_left(&fields[current_field_index]);
-        } else if (ch == KEY_RIGHT) {
+        } 
+	else if (ch == KEY_RIGHT) 
+	{
             handle_cursor_right(&fields[current_field_index]);
-        } else if (ch >= 32 && ch <= 126) {
+        } 
+	else if (ch >= 32 && ch <= 126) 
+	{
             handle_input_char(&fields[current_field_index], ch);
         }
     }
