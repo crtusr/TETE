@@ -19,5 +19,6 @@ typedef struct MenuItem {
 void recuadro (int start_x, int start_y, int width, int height);
 
 int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level);
+int yesNoMenu(char *yes, int yesX, int yesY, char* no, int noX, int noY);
 
 #endif
