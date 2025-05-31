@@ -322,3 +322,50 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
     free(num_cols_per_row);
     return 0;
 }
+
+int yesNoMenu(char *yes, int yesX, int yesY, char* no, int noX, int noY)
+{
+  int selection = 1;
+  int ch = 0;
+  while(ch != '\n' && ch != '\r')
+  {
+    //Drawing loop
+    for(int i = 0; i < 2; i++) 
+    {
+      if(selection == 1)
+      {
+        attron(A_REVERSE);
+        mvprintw(yesX, yesY, "%s", yes);
+        attroff(A_REVERSE);
+        mvprintw(noX, noY, "%s", no);
+      }
+      else
+      {
+        mvprintw(yesX, yesY, "%s", yes);
+        attron(A_REVERSE);
+        mvprintw(noX, noY, "%s", no);
+        attroff(A_REVERSE);
+      }
+    }
+    ch = getch();
+    switch(ch)
+    {
+      case KEY_UP:
+        break;
+      case KEY_DOWN:
+        break;
+      case KEY_LEFT:
+        if(selection == 1) selection = 0;
+        else if(selection == 0) selection = 1;
+        break;
+      case KEY_RIGHT:
+        if(selection == 1) selection = 0;
+        else if(selection == 0) selection = 1;
+        break;
+      case '\n':
+        return selection;
+        break;
+    }
+  }
+  return selection;
+}
