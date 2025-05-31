@@ -27,8 +27,6 @@ void init_input_field(InputField* field, const char* prompt, int max_length, boo
 
 void draw_input_field(const InputField* field);
 
-static void insert_char(InputField* field, char ch);
-
 void handle_input_char(InputField* field, int ch);
 
 void handle_backspace(InputField* field);
@@ -37,6 +35,6 @@ void handle_cursor_left(InputField* field);
 
 void handle_cursor_right(InputField* field);
 
-void input_fields_loop(InputField fields[], int num_fields); // Function to handle input loop for fields
+void input_fields_loop(InputField fields[], int num_fields, void (*background)(void)); // Function to handle input loop for fields
 
 #endif
