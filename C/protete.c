@@ -609,7 +609,7 @@ void agregarCtacte()
   descriptor ctasctes_descr[15]; // I chose 15 because i Know the file I will be opening has less than 15 fields,
   FILE *cli_ptr = NULL;
   header cli_head[1];
-  descriptor cli_descr[20]; // MAKE SURE YOU DECLARE MORE DESCRIPTORS THAN THERE ALREADY HAVE, IF NOT, IT WILL BE THE END OF THE WORLD
+  descriptor cli_descr[20]; // MAKE SURE YOU DECLARE MORE DESCRIPTORS THAN THERE ALREADY ARE, IF NOT, IT WILL BE THE END OF THE WORLD
   
   //variables and structs related to CTASCTES.dbf
   
