@@ -336,50 +336,46 @@ void spaceFill(char *string, size_t size)
 
 int addDecimals(char *string, const size_t size, const size_t decimals)
 {
-  if(size < decimals) return -1;
+  if(size <= decimals) return -1;
   int dotCheck = 0;
-  int decimalCount = 0;
-  /*si hay coma y no llega a la cantidad de decimales entonces string[size - decimals - 1] = '.' 
-    y un for para todos string[size - (decimals - i) - 1] hasta que i sea igual a la cantidad de decimales
-    rellenar con ceros hasta el final
-  */
-  /*
-    si no hay coma truncar los enteros hasta string[size - decimals - 2] agregar coma y rellenar con ceros
-    hasta i = decimals 
-  */
-  /*si hay una coma
-//
+  if(string[0] == ' ' || string[0] == '\0')
+  {
+    string[0] = '0';
+  }
   for(int i = 0; i < size; i++)
   {
-    if(string[i] == ' ' && i < size - decimals && dotcheck == 0)
+    //printf("%s %d %zu %zu\n", string, i, size, size - decimals);
+    if((string[i] == ' ' || string[i] == '\0') && i < size - decimals && dotCheck == 0)
     {
-      dotcheck = 1;
+      //printf("if 1 %s", string);
+      dotCheck = 1;
       string[i] = '.';
       for(int j = 0; j < decimals; j++)
       {
-        string[size - (decimals - j) -1] = '0';
+        string[i + j + 1] = '0';
       }
-      break();
     }
-    if(string[i] == '.' && i < size - decimals && dotcheck == 0)
+    if(string[i] == '.' && i < size - decimals && dotCheck == 0)
     {
-      dotcheck = 1;
+      //printf("if 2 %s", string);
+      dotCheck = 1;
       for(int j = 0; j < decimals; j++)
       {
         if(string[i] == ' ')
         {
-          string[size - (decimals - j) -1] = '0';
+          string[i + j + 1] = '0';
         }
-      break();
       }
     }
+    
   }
   if(dotCheck == 0)
   {
+    printf("if 3 %s", string);
     string[size - decimals - 1] = '.';
     for(int j = 0; j < decimals; j++)
     {
-      string[size - (decimals - j) -1] = '0';
+      string[size - (decimals - j)] = '0';
     }
   }
   dotCheck = 0;
@@ -388,11 +384,18 @@ int addDecimals(char *string, const size_t size, const size_t decimals)
   {
     dot++;
   }
-  dot += 
-  while(dot < size)
-		{
-		  
-		}
+  dot++;
+  dot += decimals;
+  if(dot < size)
+  {
+    while(dot < size)
+    {
+      string[dot] = ' ';
+      dot++;
+    }
+  }
+  string[dot] = '\0';
+  return 0;
 }
 
 int replaceField()
