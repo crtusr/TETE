@@ -243,7 +243,9 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
                     if (selected_item->action != NULL) {
                         selected_item->action(); // Ejecutar acción
                         // Comprobar si la acción fue salir del submenú
-                        if (strcmp(selected_item->text, "Retroceder") == 0 || strcmp(selected_item->text, "Menu anterior") == 0)
+                        if (strcmp(selected_item->text, "Retroceder") == 0 || strcmp(selected_item->text, "Menu anterior") == 
+
+0)
                         {
                             free(num_cols_per_row);
                             // No limpiar ni redibujar aquí, eso lo hará el nivel superior
@@ -363,6 +365,9 @@ int yesNoMenu(char *yes, int yesX, int yesY, char* no, int noX, int noY)
         else if(selection == 0) selection = 1;
         break;
       case '\n':
+        return selection;
+        break;
+      case PADENTER:
         return selection;
         break;
     }
