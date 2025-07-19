@@ -6,18 +6,17 @@
 #include "menu.h"
 #include "protete.h"
 
-int main() 
-{
+int main() {
 	
 	MenuItem ConsProv_menu[] = {
-	{"OPERACION INDIVIDUAL (por numero de operacion)", NULL, consulta_compra, 		1, 2, 20, 0, 0, NULL , consultas_op},
+	{"OPERACION INDIVIDUAL (por numero de operacion)", NULL, consulta_compra, 	1, 2, 20, 0, 0, NULL , consultas_op},
         {"LISTADO POR IMPRESORA (por cliente)", NULL, NULL, 			2, 4, 20, 0, 1, NULL , NULL},
 	{"Menu anterior", NULL, operaciones, 					3, 6, 20, 0, 2, NULL , NULL},
 	{"BALANCE DE DEUDAS", NULL, NULL, 					4, 8, 20, 0, 3, NULL , NULL},
 	{"RESUMEN DE FACTURACION MES A MES", NULL, NULL, 			5, 10, 20, 0, 4, NULL , NULL},
 	{"OPERACIONES POR FECHA", NULL, NULL, 					6, 12, 20, 0, 5, NULL , NULL},
 	{"OPERACIONES ENTRE DOS FECHAS", NULL, NULL, 				7, 14, 20, 0, 6, NULL , NULL},
-	{"ULTIMAS 23 OPERACIONES (por poveedor)", NULL, NULL, 					8, 16, 20, 0, 7, NULL , NULL},
+	{"ULTIMAS 23 OPERACIONES (por poveedor)", NULL, ultimas_op_com, 	8, 16, 20, 0, 7, NULL , NULL},
         {NULL, NULL, NULL, 			0, 0, 0, 0, 0, NULL , NULL}
 	};
 
@@ -34,15 +33,15 @@ int main()
 	};
 
 	MenuItem CliOp_menu[] = {
-	{"Registrar", NULL, NULL, 		1, 22, 6, 0, 0, NULL , operaciones},
+	{"Registrar", NULL, agregarCtacte, 		1, 22, 6, 0, 0, NULL , operaciones},
         {"Consultas", ConsCli_menu, NULL, 	2, 22, 22, 0, 1, NULL , NULL},
 	{"Menu anterior", NULL, menprov, 	3, 22, 37, 0, 2, NULL , NULL},
-	{"Modificaciones", NULL, NULL, 		4, 22, 52, 0, 3, NULL , NULL},
+	{"Modificaciones", NULL, modCtacte, 		4, 22, 52, 0, 3, NULL , NULL},
         {NULL, NULL, NULL, 			0, 0, 0, 0, 0, NULL , NULL}
 	};
 	
 	MenuItem ProvOp_menu[] = {
-	{"Altas", NULL, NULL, 			1, 22, 6, 0, 0, NULL , operaciones},
+	{"Altas", NULL, agregarOrdCom, 			1, 22, 6, 0, 0, NULL , operaciones},
         {"Consultas", ConsProv_menu, NULL, 	2, 22, 22, 0, 1, NULL , NULL},
 	{"Menu anterior", NULL, menprov, 	3, 22, 37, 0, 2, NULL , NULL},
 	{"Modificaciones", NULL, NULL, 		4, 22, 52, 0, 3, NULL , NULL},
@@ -82,17 +81,16 @@ int main()
         {NULL, NULL, NULL, 			0, 0, 0, 0, 0, NULL , NULL}
 	};
 
-	MenuItem Main_menu[] = 
-	{
-    {"Clientes", Clientes_menu, NULL, 	0, 3, 2, 0 ,0 , NULL, menu_principal},
-    {"Stock", Stock_menu, NULL, 		1, 3, 14, 0 ,1 , NULL, NULL},
-    {"Compras", Compras_menu, NULL, 	2, 3, 25,0 ,2 , NULL, NULL},
-	  {"Ctas.ctes.", CliOp_menu, NULL, 	3, 5, 2, 1 ,0 , NULL, operaciones},
-	  {"Parametros", NULL, NULL, 		4, 5, 14, 1 ,1 , NULL, NULL},
-	  {"Cheques", NULL, NULL, 		5, 5, 25, 1 ,2 , NULL, NULL},
-	  {"DOS", NULL, NULL, 			6, 5, 35, 1 ,3 , NULL, NULL},
-	  {"DEBUG", NULL, agregarCtacte,		7, 6, 35, 1 ,4 , NULL, NULL},
-    {NULL, NULL, NULL, 			0, 0, 0, 0 ,0 , NULL , NULL}
+	MenuItem Main_menu[] = {
+        {"Clientes", Clientes_menu, NULL, 	0, 3, 2, 0 ,0 , NULL, menu_principal},
+        {"Stock", Stock_menu, NULL, 		1, 3, 14, 0 ,1 , NULL, NULL},
+        {"Compras", Compras_menu, NULL, 	2, 3, 25,0 ,2 , NULL, NULL},
+	{"Ctas.ctes.", CliOp_menu, NULL, 	3, 5, 2, 1 ,0 , NULL, operaciones},
+	{"Parametros", NULL, NULL, 		4, 5, 14, 1 ,1 , NULL, NULL},
+	{"Cheques", NULL, NULL, 		5, 5, 25, 1 ,2 , NULL, NULL},
+	{"DOS", NULL, NULL, 			6, 5, 35, 1 ,3 , NULL, NULL},
+	{"DEBUG", NULL, modCom,			7, 6, 35, 1 ,4 , NULL, NULL},
+        {NULL, NULL, NULL, 			0, 0, 0, 0 ,0 , NULL , NULL}
 	};
 
 	initscr();
