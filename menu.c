@@ -52,6 +52,7 @@ static void redibujar_menu_items(
     }
 
     // 2. Dibujar el fondo específico del (sub)menú si existe
+    // Ver si se puede corregir las variables de manera que el orden de los items no afecte a la caja
     if (menu->draw_background != NULL) {
         menu->draw_background(start_x, start_y, max_width + 4, num_rows + 2);
     }
@@ -176,6 +177,7 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
         }
     }
     // Llama a la función auxiliar externa para dibujar los items (y el fondo del submenú si aplica)
+    
     redibujar_menu_items(menu, current_row, current_col, max_width, num_rows, num_cols_per_row);
     refresh(); // Actualiza la pantalla después del dibujo inicial
 
@@ -243,9 +245,7 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
                     if (selected_item->action != NULL) {
                         selected_item->action(); // Ejecutar acción
                         // Comprobar si la acción fue salir del submenú
-                        if (strcmp(selected_item->text, "Retroceder") == 0 || strcmp(selected_item->text, "Menu anterior") == 
-
-0)
+                        if (strcmp(selected_item->text, "Retroceder") == 0 || strcmp(selected_item->text, "Menu anterior") == 0)
                         {
                             free(num_cols_per_row);
                             // No limpiar ni redibujar aquí, eso lo hará el nivel superior
@@ -363,6 +363,65 @@ int yesNoMenu(char *yes, int yesX, int yesY, char* no, int noX, int noY)
       case KEY_RIGHT:
         if(selection == 1) selection = 0;
         else if(selection == 0) selection = 1;
+        break;
+      case '\n':
+        return selection;
+        break;
+      case PADENTER:
+        return selection;
+        break;
+    }
+  }
+  return selection;
+}
+
+int printingMenu()
+{
+  int selection = 1;
+  int ch = 0;
+  while(ch != '\n' && ch != '\r')
+  {
+    //Drawing loop
+    
+    if(selection == 1)
+    {
+      attron(A_REVERSE);
+      mvprintw(10, 30, "   Pantalla   ");
+      attroff(A_REVERSE);
+      mvprintw(12, 30, "   Impresora  ");
+      mvprintw(14, 30, "     Salir    ");
+    }
+    else if(selection == 2)
+    {
+      mvprintw(10, 30, "   Pantalla   ");
+      attron(A_REVERSE);
+      mvprintw(12, 30, "   Impresora  ");
+      attroff(A_REVERSE);
+      mvprintw(14, 30, "     Salir    ");
+    }
+    else if(selection == 3)
+    {
+      mvprintw(10, 30, "   Pantalla   ");
+      mvprintw(12, 30, "   Impresora  ");
+      attron(A_REVERSE);
+      mvprintw(14, 30, "     Salir    ");
+      attroff(A_REVERSE);
+    }
+
+    ch = getch();
+    switch(ch)
+    {
+      case KEY_UP:
+        selection--;
+        if(selection < 1) selection = 3;
+        break;
+      case KEY_DOWN:
+        selection++;
+        if(selection > 3) selection = 1;
+        break;
+      case KEY_LEFT:
+        break;
+      case KEY_RIGHT:
         break;
       case '\n':
         return selection;
