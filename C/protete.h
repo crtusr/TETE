@@ -10,5 +10,19 @@ void agregarCtacte();
 void agregarOrdCom();
 void modCtacte();
 void modCom();
+void consCli();
+void consPro();
+void modCli();
+void modPro();
+void modStock();
+void modCheque();
+void agregarCli();
+void agregarPro();
+void agregarStock();
+void grupoPorProv();
+void agregarCheque();
+void consCheque();
+void chequesNoEntregados();
+void funcTest();
 
 #endif
