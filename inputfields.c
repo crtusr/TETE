@@ -62,10 +62,10 @@ void init_input_field(InputField* field, const char* prompt, int max_length, boo
 
 void draw_input_field(const InputField* field) 
 {
-    move(field->start_y, field->start_x);
-    //clrtoeol();
-    mvprintw(field->start_y, field->start_x, "%s", field->prompt);
-    attron(A_REVERSE);
+  move(field->start_y, field->start_x);
+  //clrtoeol();
+  mvprintw(field->start_y, field->start_x, "%s", field->prompt);
+  attron(A_REVERSE);
 	for (int i = 0; i < field->max_length; i++) 
 	{
 		addch(' ');
@@ -73,17 +73,17 @@ void draw_input_field(const InputField* field)
 	move(field->start_y, field->start_x + strlen(field->prompt));
 	for (int i = 0; i < field->count; i++) 
 	{
-        	if (field->password_mode) 
+    if (field->password_mode) 
 		{
-            		addch('*');
-        	} 
+      addch('*');
+    } 
 		else
 		{
-            		addch(field->input_buffer[i]);
-        	}
-    	}
-    attroff(A_REVERSE);
-    move(field->start_y, field->start_x + strlen(field->prompt) + field->cursor_pos); // Posicionar el cursor
+      addch(field->input_buffer[i]);
+    }
+  }
+  attroff(A_REVERSE);
+  move(field->start_y, field->start_x + strlen(field->prompt) + field->cursor_pos); // Posicionar el cursor
 }
 
 void draw_date_field(const InputField* field)
@@ -143,25 +143,65 @@ static void insert_char(InputField* field, char ch)
     }
 }
 
-void handle_input_char(InputField* field, int ch) 
+
+static void overtype_char(InputField* field, char ch)
+{
+    if (field->cursor_pos < field->max_length) {
+        field->input_buffer[field->cursor_pos] = ch;
+
+        // Only increment count if we are at the end, effectively adding a new character
+        if (field->cursor_pos == field->count) {
+            field->count++;
+            field->input_buffer[field->count] = '\0'; // Ensure null termination
+        }
+
+        // Always advance the cursor
+        field->cursor_pos++;
+    }
+}
+
+void handle_input_char(InputField* field, int ch, bool ins) 
 {
     // Check for valid input types and character ranges *before* inserting
     switch (field->type) 
     {
-        case STRING:
-            if (isprint(ch)) 
-	    {
-                insert_char(field, (char)ch);
-            }
-            break;
+      case STRING:
+        if (isprint(ch)) 
+	      {
+          if(ins)
+          {
+            insert_char(field, (char)ch);
+          }
+          else
+          {
+            overtype_char(field, (char)ch);
+          }
+        }
+        break;
         case INTEGER:
-		if (field->cursor_pos == 0 && ch == '-') 
-		{
-			insert_char(field, (char)ch);
-		}
+        
+        //CHECK ***************************
+          if (field->cursor_pos == 0 && ch == '-') 
+          {
+            if(ins)
+            {
+              insert_char(field, (char)ch);
+            }
+            else
+            {
+              overtype_char(field, (char)ch);
+            }
+          }
             	if (isdigit(ch)) 
-		{
-                	insert_char(field, (char)ch);
+              {
+                if(ins)
+                {
+                  insert_char(field, (char)ch);
+                }
+                else
+                {
+                  overtype_char(field, (char)ch);
+                }
             	}
             break;
         case FLOAT:
@@ -177,15 +217,45 @@ void handle_input_char(InputField* field, int ch)
                 if ((ch == '+' || ch == '-') && field->cursor_pos != 0 ) {
                    break;
                 }
-                 insert_char(field, (char)ch);
+                if(ins)
+                {
+                  insert_char(field, (char)ch);
+                }
+                else
+                {
+                  overtype_char(field, (char)ch);
+                }
             }
             break;
         case DATE:
-            	if (isdigit(ch)) 
-		{
-                	insert_char(field, (char)ch);
-            	}
-            break;
+            if (isdigit(ch)) 
+            {
+                if(ins)
+                {
+                  insert_char(field, (char)ch);
+                }
+                else
+                {
+                  overtype_char(field, (char)ch);
+                }
+            }
+          break;
+        case CAP:
+          if (isprint(ch)) 
+	        {
+            if(ch >= 'a' && ch <= 'z') ch -= 32;
+            {
+                if(ins)
+                {
+                  insert_char(field, (char)ch);
+                }
+                else
+                {
+                  overtype_char(field, (char)ch);
+                }
+            }
+          }
+        break;
         default:
             // Handle invalid field type (optional, but good practice)
             break;
@@ -219,22 +289,31 @@ void handle_cursor_right(InputField* field) {
 void input_fields_loop(InputField fields[], int num_fields,  void (*background)(void))
 {
     int current_field_index = 0;
+    bool is_insert_mode = false;
+    bool first_field_input = true;
     // Curses should be initialized by caller: initscr(), cbreak(), noecho(), keypad(stdscr, TRUE);
     while(1){
 
-        for (int i = 0; i < num_fields; i++) {
-	        if(fields[i].type == DATE) {
+        for (int i = 0; i < num_fields; i++) 
+        {
+	        if(fields[i].type == DATE) 
+          {
 		        draw_date_field(&fields[i]);
-		    } else {
-            	draw_input_field(&fields[i]);
-		    }
+		      } 
+          else 
+          {
+            draw_input_field(&fields[i]);
+		      }
         }
 
         InputField* active_field = &fields[current_field_index];
         int display_cursor_x_offset;
-        if (active_field->type == DATE) {
+        if (active_field->type == DATE) 
+        {
             display_cursor_x_offset = calculate_date_display_cursor_pos(active_field);
-        } else {
+        } 
+        else 
+        {
             display_cursor_x_offset = active_field->cursor_pos;
         }
         move(active_field->start_y, active_field->start_x + strlen(active_field->prompt) + display_cursor_x_offset);
@@ -243,30 +322,73 @@ void input_fields_loop(InputField fields[], int num_fields,  void (*background)(
 
         int ch = getch();
 
-        if (ch == KEY_ENTER || ch == '\n' || ch == '\r' || ch == PADENTER) {
-            if (current_field_index == num_fields - 1) {
+        if (ch == KEY_ENTER || ch == '\n' || ch == '\r' || ch == PADENTER) 
+        {
+            if (current_field_index == num_fields - 1) 
+            {
                 break;
-            } else {
+            } 
+            else 
+            {
+                first_field_input = true;
+                active_field->cursor_pos = 0; // TEST
                 current_field_index++;
                 // Optional: Reset cursor position for the new active field
                 // fields[current_field_index].cursor_pos = fields[current_field_index].count; // e.g., to end
             }
-        } else if (ch == KEY_UP) {
-            if (current_field_index > 0) {
+        } 
+        else if (ch == KEY_UP)
+        {
+          
+            if (current_field_index > 0) 
+            {
+                first_field_input = true;
+                active_field->cursor_pos = 0; // TEST
                 current_field_index--;
             }
-        } else if (ch == KEY_DOWN) {
-            if (current_field_index < num_fields - 1) { // Prevent going past last field
+        } 
+        else if (ch == KEY_DOWN) 
+        {
+            if (current_field_index < num_fields - 1) 
+            { // Prevent going past last field
+                first_field_input = true;
+                active_field->cursor_pos = 0; // TEST
                 current_field_index++;
             }
-        } else if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) { // Handle common backspace/delete keys
+        } 
+        else if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) 
+        { // Handle common backspace/delete keys
+            first_field_input = false;
             handle_backspace(&fields[current_field_index]);
-        } else if (ch == KEY_LEFT) {
+        }
+        else if (ch == KEY_LEFT) 
+        {
+            first_field_input = false;
             handle_cursor_left(&fields[current_field_index]);
-        } else if (ch == KEY_RIGHT) {
+        }
+        else if (ch == KEY_RIGHT) 
+        {
+            first_field_input = false;
             handle_cursor_right(&fields[current_field_index]);
-        } else if (ch >= 32 && ch <= 126) { // Standard printable ASCII
-            handle_input_char(&fields[current_field_index], ch);
+        }
+        //else if (ch >= 32 && ch <= 126) 
+        else if (isprint(ch)) 
+        { // Standard printable ASCII
+            if(first_field_input && (active_field->type == INTEGER || active_field->type == FLOAT) && (isdigit(ch) || ch == '.' || ch == '+' || ch == '-')  )
+            {
+              for(int i = 0; i < active_field->max_length; i++)
+              {
+                //Clear active field
+                active_field->input_buffer[i] = 0;
+              }
+              active_field->count = 0;
+            }
+              handle_input_char(&fields[current_field_index], ch, is_insert_mode);
+              if(isdigit(ch) || ch == '.' || ch == '+' || ch == '-') first_field_input = false;
+        }
+        else if (ch == KEY_IC) 
+        {
+            is_insert_mode = !is_insert_mode;
         }
     }
 }
