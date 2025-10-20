@@ -63,11 +63,15 @@ typedef struct {
 
 void store_header_data(header *head, FILE *file, int i);
 void store_descriptor_data(descriptor *fields, FILE *file);
-int get_index(char* campo, char* string, FILE* file, header* head, descriptor* descr);
+int get_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);
+int get_indexes(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);
+int get_indexes_gr_th(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);
+int get_indexes_lw_th(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);
+int get_indexes_betw(int* indexes, const char* campo, const char* low, const char* high, FILE* file, header* head, descriptor* descr);
 int get_data(char* buffer, int indice, char* campo, FILE* file, header* head, descriptor* descr);
 int get_record(char* buffer, int indice, FILE* file, header* head, descriptor* descr);
 void rightAlign(char *string, size_t size);
-int readMemo(unsigned char* buffer, char* file, const int block);
+int readMemo(char* buffer, char* file, const int block);
 int replaceField();
 void dateFormatter(char* date);
 long long atonum(const char* number);
@@ -75,7 +79,7 @@ void spaceFill(char *string, size_t size);
 int sumFields(char *res, char* a, char* b);
 int subFields(char *res, char* a, char* b);
 int addDecimals(char *string, const size_t size, const size_t decimals);
-int addRecord(char* buffer, char* fname, size_t size);
+int addRecord(char* buffer, const char* fname, size_t size);
 int addMemo(const char* fileName, char* buffer);
 int replaceMemo(const char* fileName, char* buffer, int blockNum);
 
