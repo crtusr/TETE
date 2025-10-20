@@ -9,7 +9,8 @@ typedef enum {
     STRING,
     INTEGER,
     FLOAT,
-    DATE
+    DATE,
+    CAP
 } InputFieldType;
 
 typedef struct {
@@ -27,7 +28,7 @@ typedef struct {
 void init_input_field(InputField* field, const char* prompt, int max_length, bool password_mode, int start_x, int start_y, int type);
 void draw_input_field(const InputField* field);
 void draw_date_field(const InputField* field);
-void handle_input_char(InputField* field, int ch);
+void handle_input_char(InputField* field, int ch, bool ins);
 void handle_backspace(InputField* field);
 void handle_cursor_left(InputField* field);
 void handle_cursor_right(InputField* field);
