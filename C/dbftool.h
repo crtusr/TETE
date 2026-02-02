@@ -61,10 +61,12 @@ typedef struct {
 } descriptor;
 
 
-void store_header_data(header *head, FILE *file, int i);
+size_t store_header_data(header *head, FILE *file, int i);
 void store_descriptor_data(descriptor *fields, FILE *file);
 int get_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);
+int get_incomplete_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);
 int get_indexes(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);
+int get_indexes_neq(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);
 int get_indexes_gr_th(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);
 int get_indexes_lw_th(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);
 int get_indexes_betw(int* indexes, const char* campo, const char* low, const char* high, FILE* file, header* head, descriptor* descr);
