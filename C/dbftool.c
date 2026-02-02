@@ -5,7 +5,8 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <ctype.h>
-//#include <curses.h> // for debugging
+#include <curses.h> // for debugging
+#include "debug.h"
 
 #define FIELD_SIZE 32L
 #define FIELD_NAME 11L
@@ -151,9 +152,8 @@ Esta funcion es para leer el encaezado del archivo .dbf y cargarlo en una estruc
 Estoy haciendo por prueba y error para cargar los bytes correctos en cada campo.
 */
 
-void store_header_data(header *head, FILE *file, int i) 
+size_t store_header_data(header *head, FILE *file, int i) 
 {
-
 
 	unsigned char buffer[FIELD_SIZE];
 	memset(buffer, 0, FIELD_SIZE);
@@ -198,6 +198,7 @@ void store_header_data(header *head, FILE *file, int i)
 	fread(buffer, sizeof(head->res3), 1, file); //2 reserved bytes
 	memcpy((&head[i].res3), buffer, sizeof(head->res3));
 
+  return (head->header_bytes - 32) / 32;
 }
 
 /* This function is for parsing the field descriptors of the .dbf and loading it into a struct (descriptor). 
@@ -326,6 +327,166 @@ int get_index(const char* campo, const char* string, FILE* file, header* head, d
 	}
 	
         if(check == 0) return rindex - 1; //found
+        else return -1; //not found
+		
+}
+
+int get_incomplete_index(const char* campo, const char* string, FILE* file, header* head, descriptor* descr)
+{
+	//busco el indice del campo
+
+	if (strlen(string) > MAX_FIELD_LENGTH) 
+	{
+	  perror("used more than 254 characters...");
+	  return -3;
+	}
+
+	int i = 0;
+	int j = 0;
+	int offset = 0;
+	int rindex = 0;
+	int check = 1;
+	char buffer[MAX_FIELD_LENGTH];
+	memset(buffer, 0, 254);
+	
+	//fseek(file, FIELD_SIZE, SEEK_SET);
+	while(strncmp(descr[i].fieldname, campo, FIELD_NAME)) 
+	{
+	  i++;
+	  if(descr[i].fieldname[0] == 0x0d)
+	  {
+	    return -2; //No such field
+	  }
+	}
+
+
+	//pongo el cursor en el lugar donde compienzan los registros
+
+	fseek(file, head[0].header_bytes, SEEK_SET);
+	
+	//offseteo el puntero al valor decriptor[0].length + ... + descriptor[indice].length
+
+	while(j < i) 
+	{
+	  offset += descr[j].length; 
+	  j++;
+	}
+
+	fseek(file, offset + 1, SEEK_CUR);
+
+	//loopeo 
+
+	//leo el valor del campo y comparo con el string que quiero buscar
+
+	while(check != 0 && rindex < head[0].nofrecords) 
+	{
+	  fread(buffer, descr[i].length, 1, file);
+	  check = strncmp(string, buffer, strnlen(string, 255));
+
+	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
+
+	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
+	  rindex++;
+	}
+	
+        if(check == 0) return rindex - 1; //found
+        else return -1; //not found
+		
+}
+
+
+int get_indexes_neq(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr)
+{
+	/*
+    Indexes must not be shorter than the estimation of
+    the number of records that one expects to find, the 
+    safest would be to allocate for as much indexes as
+    records, but if you know how much in advance, you 
+    may lower the number
+  */
+  // change to something safer
+  int len = strnlen(string, MAX_FIELD_LENGTH);
+  
+	if (len > MAX_FIELD_LENGTH) 
+	{
+	  perror("used more than 254 characters...");
+	  return -3;
+	}
+  
+  int k = 0;
+	int i = 0;
+	int j = 0;
+	int offset = 0;
+	int rindex = 0;
+	int check = 1;
+	char buffer[MAX_FIELD_LENGTH + 1];
+  char buffer2[MAX_FIELD_LENGTH + 1];
+	memset(buffer, 0, MAX_FIELD_LENGTH + 1);
+  memset(buffer2, 0, MAX_FIELD_LENGTH + 1);
+	//fseek(file, FIELD_SIZE, SEEK_SET);
+  
+  //add upper bound to the loop (254 which is the max amount of fields)
+	while(strncmp(descr[i].fieldname, campo, FIELD_NAME)) 
+	{
+	  i++;
+	  if(descr[i].fieldname[0] == 0x0d)
+	  {
+	    return -2; //No such field
+	  }
+	}
+
+
+	//pongo el cursor en el lugar donde compienzan los registros
+
+	fseek(file, head[0].header_bytes, SEEK_SET);
+	
+	//offseteo el puntero al valor decriptor[0].length + ... + descriptor[indice].length
+
+	while(j < i) 
+	{
+	  offset += descr[j].length; 
+	  j++;
+	}
+
+	fseek(file, offset + 1, SEEK_CUR);
+
+	//loopeo 
+
+	//leo el valor del campo y comparo con el string que quiero buscar
+  memcpy(buffer2, string, len);
+  
+  
+  //right align numbers
+  switch(descr[i].type)
+  {
+    case 'N':
+      rightAlign(buffer2, descr[i].length);
+      break;
+    case 'C':
+      spaceFill(buffer2, descr[i].length);
+      break;
+  }
+
+	while(rindex < head[0].nofrecords) 
+	{
+	  fread(buffer, descr[i].length, 1, file);
+	  check = strncmp(buffer2, buffer, descr[i].length);
+    
+//mvprintw(0,0, "***%s %s %d %d***", buffer2, buffer, check, k);
+//getch();
+    
+    if(check)
+    {
+      indexes[k] = rindex;
+      k++;
+    }
+
+	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
+
+	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
+	  rindex++;
+	}
+        if(indexes[1]) return k; //found and returns the amount of indexes
         else return -1; //not found
 		
 }
@@ -1018,8 +1179,13 @@ long long atonum(const char* number)
   { 
     if(isdigit(number[i]))
     {
+      if(!numcheck) numcheck = 1;
       noDecimal[j] = number[i];
       j++;
+    }
+    else if((numcheck == 1 || negcheck == 1) && number[i] == ' ')
+    {
+      break;
     }
     else if(negcheck == 0 && numcheck == 0 && number[i] == '-')
     {
@@ -1032,6 +1198,7 @@ long long atonum(const char* number)
   }
   //transform nodecimal to a long long
   retval = atoll(noDecimal);
+
   return retval; 
 }
 
@@ -1082,7 +1249,7 @@ int sumFields(char *res, char* a, char* b)
   int decBottom = 0;
   int diff = 0;
   long long int tenPow = 1;
-  //check decimals
+  //check decimals, it assumes the number string pointed by the pointer is alone "0.00 12.00" will break it 
   for(int i = 0; i < 21 ; i++)
   {
     if(a[i] == 0)
@@ -1147,8 +1314,8 @@ int subFields(char *res, char* a, char* b)
   int decBottom = 0;
   int diff = 0;
   long long int tenPow = 1;
-  //check decimals
-  for(int i = 0; i < 21 ; i++)
+  //check decimals, it assumes the number string pointed by the pointer is alone "0.00 12.00" will break it 
+  for(int i = 0; i < 21; i++)
   {
     if(a[i] == 0)
     {
@@ -1178,6 +1345,9 @@ int subFields(char *res, char* a, char* b)
   //conversion to int
   long long anum = atonum(a);
   long long bnum = atonum(b);
+  
+  
+
   //Which has more decimal places
   if(decA >= decB)
   {
@@ -1200,6 +1370,27 @@ int subFields(char *res, char* a, char* b)
   return 0;
 }
 
+/*
+// Leave it for later
+int removeRecord(const size_t index, const char* fName)
+{
+	//for now i will make it so that it opens the file and deletes the record at determined index
+	FILE *fPtr = NULL;
+	header head[1];
+	descriptor descr[MAX_DBF_FIELDS];
+  
+  fptr = fopen(fName, "r+b");
+
+	store_header_data(head, fPtr, 0);
+	store_descriptor_data(descr, fPtr);
+
+	fseek(fPtr, head[0].header_bytes, SEEK_SET);
+  fseek(fPtr, head[0].record_bytes * index , SEEK_CUR);
+	
+
+  return 0;
+}
+*/
 int addRecord(char* buffer, const char* fname, size_t size)
 {
   // I have to append the buffer into the file as a register, so I have to copy the amount of bytes of head->register_bytes.
@@ -1337,3 +1528,23 @@ int replaceMemo(const char* fileName, char* buffer, int block)
   }
   return 0;
 }
+
+// This is risky but i will make a function to memoize the whole file
+
+void extractAll(FILE* fPtr, header* head, descriptor* descr, char* record)
+{
+  
+  //size_t rows = head->nofrecords + 1;
+  size_t cols = head->record_bytes + 1;
+  
+  for(int i = 0; i < head->nofrecords; i++)
+  {
+    get_record(&record[(i * cols)], i, fPtr, head, descr);
+    record[(i * cols) + head->record_bytes] = 0;
+    //printf("%s",&record[(i * cols)]);
+    //getchar();
+  }
+  
+  return;
+}
+
