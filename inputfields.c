@@ -5,6 +5,9 @@
 #include <ctype.h>
 #include "inputfields.h"
 
+#define IS_EXTENDED_PRINT(c) ((unsigned char)(c) >= 32 && (unsigned char)(c) <= 255)
+
+
 static int calculate_date_display_cursor_pos(const InputField* field) {
     // input_buffer stores DDMMYYYY. field->cursor_pos is index in this buffer.
     // Display format is YYYY-MM-DD.
@@ -79,7 +82,7 @@ void draw_input_field(const InputField* field)
     } 
 		else
 		{
-      addch(field->input_buffer[i]);
+      addch((unsigned char)field->input_buffer[i]);
     }
   }
   attroff(A_REVERSE);
@@ -163,18 +166,25 @@ static void overtype_char(InputField* field, char ch)
 void handle_input_char(InputField* field, int ch, bool ins) 
 {
     // Check for valid input types and character ranges *before* inserting
+    unsigned char upper[255] = {0};
+    upper[225] = (unsigned char)193; //Ä
+    upper[233] = (unsigned char)201;
+    upper[237] = (unsigned char)205;
+    upper[243] = (unsigned char)211;
+    upper[250] = (unsigned char)218;
+    upper[241] = (unsigned char)209;
     switch (field->type) 
     {
       case STRING:
-        if (isprint(ch)) 
+        if (IS_EXTENDED_PRINT((unsigned char)ch)) 
 	      {
           if(ins)
           {
-            insert_char(field, (char)ch);
+            insert_char(field, (unsigned char)ch);
           }
           else
           {
-            overtype_char(field, (char)ch);
+            overtype_char(field, (unsigned char)ch);
           }
         }
         break;
@@ -241,18 +251,17 @@ void handle_input_char(InputField* field, int ch, bool ins)
             }
           break;
         case CAP:
-          if (isprint(ch)) 
+          if (IS_EXTENDED_PRINT((unsigned char)ch)) 
 	        {
             if(ch >= 'a' && ch <= 'z') ch -= 32;
+            else if(upper[ch]) ch = (unsigned char)upper[ch];
+            if(ins)
             {
-                if(ins)
-                {
-                  insert_char(field, (char)ch);
-                }
-                else
-                {
-                  overtype_char(field, (char)ch);
-                }
+              insert_char(field, (unsigned char)ch);
+            }
+            else
+            {
+              overtype_char(field, (unsigned char)ch);
             }
           }
         break;
@@ -286,7 +295,7 @@ void handle_cursor_right(InputField* field) {
     }
 }
 
-void input_fields_loop(InputField fields[], int num_fields,  void (*background)(void))
+int input_fields_loop(InputField fields[], int num_fields,  void (*background)(void))
 {
     int current_field_index = 0;
     bool is_insert_mode = false;
@@ -326,7 +335,7 @@ void input_fields_loop(InputField fields[], int num_fields,  void (*background)(
         {
             if (current_field_index == num_fields - 1) 
             {
-                break;
+                return 0;
             } 
             else 
             {
@@ -337,6 +346,10 @@ void input_fields_loop(InputField fields[], int num_fields,  void (*background)(
                 // fields[current_field_index].cursor_pos = fields[current_field_index].count; // e.g., to end
             }
         } 
+				else if(ch == 27)
+				{
+          return 1;
+				}
         else if (ch == KEY_UP)
         {
           
@@ -372,7 +385,7 @@ void input_fields_loop(InputField fields[], int num_fields,  void (*background)(
             handle_cursor_right(&fields[current_field_index]);
         }
         //else if (ch >= 32 && ch <= 126) 
-        else if (isprint(ch)) 
+        else if (IS_EXTENDED_PRINT((unsigned char)ch)) 
         { // Standard printable ASCII
             if(first_field_input && (active_field->type == INTEGER || active_field->type == FLOAT) && (isdigit(ch) || ch == '.' || ch == '+' || ch == '-')  )
             {
