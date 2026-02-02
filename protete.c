@@ -1,5 +1,5 @@
+#include <stdio.h>
 #include <ctype.h>
-
 #include <curses.h>
 #include <string.h>
 #include <stdlib.h>
@@ -7,41 +7,16 @@
 #include <stdbool.h>
 #include "fondos.h"
 #include "menu.h"
-#include "dbftool.h"
+#include "protete.h"
 #include "inputfields.h"
-
+#include "dbftool.h"
+//#include "debug.h"
 //macros for dbf fields of ctasctes.dbf used for clarity
-#define CHECKINT(a) mvprintw(0, 0, "%d", a); getch()
-#define CHECKCHAR(a) mvprintw(0, 0, "%c", a); getch()
-#define CHECKINTX(a) mvprintw(0, 0, "%x", a); getch()
-#define CHECKCHARX(a) mvprintw(0, 0, "%x", a); getch()
-#define CHECKSTR(a,b) move(0, 0); for(int asd = 0; asd < b; asd++) {printw("%x ", a[asd]);} getch()
-
-#define CLI_MAX_LENGTH 30
-#define PRO_MAX_LENGTH 30
-#define STOCK_MAX_LENGTH 30
-#define CHEC_MAX_LENGTH 20
-#define FILTER_BUFFER_SIZE 255
-
-
-#define OPERAC ctasctes_descr[0].length
-#define FECHA ctasctes_descr[1].length
-#define FACTUR ctasctes_descr[2].length
-#define NROCLI ctasctes_descr[3].length
-#define DENOMI ctasctes_descr[4].length
-#define ACREE ctasctes_descr[5].length
-#define DEUDO ctasctes_descr[6].length
-#define ECHEQ ctasctes_descr[7].length
-#define EEFEC ctasctes_descr[8].length
-#define RCHEQ ctasctes_descr[9].length
-#define REFEC ctasctes_descr[10].length
-#define OBSERV ctasctes_descr[11].length
 
 //                                *****Formatting functions*****
-
 static void dateRectifier(char* date)
 {
-  char rightDate[8];
+  char rightDate[11]; //NEEDS NULL TERMINATOR YOU IDIOT
   snprintf(rightDate, 11, "%c%c-%c%c-%c%c%c%c", date[6], date[7], date[4], date[5], date[0], date[1], date[2] , date[3]);
   memcpy(date, rightDate, 10);
   return;
@@ -105,8 +80,8 @@ static void edMemoTextbox(char* buffer)
   int lineNum = 0;
   int j = 0;
   int ib = 0;
-  mvprintw(0, 0, "Check before loops");
-  getch();
+  //mvprintw(0, 0, "Check before loops");
+  //getch();
   for(int i = 0; i < 5; i++)
   {
     init_input_field(&memo[i], "", 31, FALSE, 4, 9 + i, STRING);
@@ -175,12 +150,167 @@ int isMemoEmpty(char* buffer)
 
 //                                *****Helper functions*****
 
+
+/*
+//set intersection between two index list
+static int indexIntersection(int* index1, int nOfInd1, int* index2, int nOfInd2, int* filtered)
+{
+  int nOfIndex3 = 0;
+  for(int i = 0; i < nOfInd1; i++)
+  {
+    for(int j = 0; j < nOfInd2; i++)
+    {
+      if(index1[i] = index2[j])
+      {
+        filtered[i] = index1[i];
+        nOfIndex3++;
+        break;
+      }
+    }
+  }
+  return nOfIndex3;
+}
+*/
+//Set Union between two indexe list for "deudores"
+static int indexSetUnion(int* index1, int nOfInd1, int* index2, int nOfInd2, int* filtered)
+{
+  int k = 0;
+  int i = 0, j = 0;
+  
+  while(i < nOfInd1 || j < nOfInd2)
+  {
+    if (i >= nOfInd1) 
+    {
+      filtered[k] = index2[j];
+      k++;
+      j++;
+    }
+    else if (j >= nOfInd2) 
+    {
+      filtered[k] = index1[i];
+      k++;
+      i++;
+    }
+    else if(index1[i] < index2[j])
+    {
+      filtered[k] = index1[i];
+      k++;
+      i++;
+    }
+    else if(index1[i] > index2[j])
+    {
+      filtered[k] = index2[j];
+      k++;
+      j++;
+    }
+    else
+    {
+      filtered[k] = index1[i];
+      k++;
+      i++;
+      j++;
+    }
+  }
+  return k;
+}
+
+
+//Workaround For retrieving the indexes made by indexer
+static int retrieveIndex(header* head, const char* fName, size_t* index)
+{
+  FILE* idxPtr = NULL;
+  idxPtr = fopen(fName, "rb");
+  if(idxPtr == NULL)
+  {
+    mvprintw(0,0, "No se pudo abrir %s", fName);
+    getch();
+    return -1;
+  }
+  fread(index, sizeof(int), head->nofrecords, idxPtr);
+
+  if(fclose(idxPtr) != 0)
+  {
+    mvprintw(0,0, "error al cerrar el archivo");
+    getch();
+    return -1;
+  }
+  return 0;
+}
+static int keyControlsHandler(int indice)
+{
+  int ch = 0;
+  ch = getch();
+  switch(ch)
+  {
+    case KEY_UP:
+      return indice - 1;
+    case KEY_DOWN:
+      return indice + 1;
+    default:
+      return - 1;
+  }
+}
+
+//helper function to extXXXXFileds it calculates the offsets of the beginning of each field
+static void calculateOffset(SearchFields* fields, const char* field, size_t* offsets, const descriptor* descr)
+{
+  int i = 0;
+  int j = 0;
+  size_t len1;
+  size_t cmpLen = 10;
+  
+  while(strncmp(field, descr[i].fieldname, cmpLen))
+  {
+    if(!strncmp(fields[j].fieldName, descr[i].fieldname, cmpLen))
+    {
+      if(j > 0)
+      {
+        offsets[0] += (descr[i].length + 1);
+        if(descr[i].type == 'D') 
+        {
+          offsets[0] += 2;
+          if(fields[j].setting == YEAR_OFF) 
+          {
+            offsets[0] -= 5;
+          }
+        }
+      }
+      j++;
+      i = 0;
+    }
+    else i++;
+    
+
+    len1 = strnlen(fields[j].fieldName, 10);
+    cmpLen = len1 < 10 ? len1 : 10;
+  }
+  i = 0;
+  while(descr[i].fieldname[0] != TERMINATOR)
+  {
+    if(!strncmp(field, descr[i].fieldname, 10))
+    {
+      offsets[1] += descr[i].length;
+    }
+    if(descr[i].type == 'D')
+        {
+          offsets[1] += 2;
+          if(fields[j].setting == YEAR_OFF) 
+          {
+            offsets[1] -= 5;
+          }
+        }
+    i++;
+  }
+  return;
+}
 //pRecord prints the record in a <<DESCRIPTOR: FIELD>> pair per line Trying to emulate the original Code.
 // Using bubble sort for testing sorting by index instead of in place. Replace it in the future with quicksort
 static void bSortStr(char* buffer, int* index, size_t size, size_t* off)
 {
   int temp;
-  size_t len = strnlen(buffer, MAX_FIELD_LENGTH) + 1;
+  size_t len;
+  if(!off[2]) len = strnlen(buffer, MAX_FIELD_LENGTH) + 1;
+  else len = off[2];
   int check = 0;
   while(size > 1)
   {
@@ -206,6 +336,81 @@ static void zeroFill(char* sto)
   {
     if(sto[i] == ' ') sto[i] = '0';
   }
+}
+
+/*
+  iFPtr = fopen(idxFName, "rb");
+
+  if (ifPtr == NULL) 
+  {
+    mvprintw(0, 0, "error abriendo %s: %s", arch, strerror(errno));
+    getch();
+    return;
+  }
+  fread(index, sizeof(int), head->nofrecords, iFPtr);
+
+  fclose(iFPtr);
+*/
+static void pRecordNew(const char* arch, const size_t recIndex, const int xPos, const int yPos)
+{
+  // declaracion de variables
+  FILE* fPtr = NULL;
+  header head[1];
+  descriptor descr[20];
+  char buffer[MAX_FIELD_LENGTH + 1] = {0};
+  char deudor[32], acreedor[32], saldo[32];
+  int descr_index = 0;
+  int clipro = !strncmp(arch, "CLIPRO.DBF", 7);
+  int prove = !strncmp(arch, "PROVE.DBF", 6);
+  
+  // Abro el archivo y extraigo el encabezado
+  
+  fPtr = fopen(arch, "rb");
+  if (fPtr == NULL) 
+  {
+    mvprintw(0, 0, "error abriendo %s: %s", arch, strerror(errno));
+    getch();
+    return;
+  }
+
+  store_header_data(head, fPtr, 0);
+  store_descriptor_data(descr, fPtr);
+
+  // imprimo
+
+  if(clipro || prove)
+  {
+    memset(deudor, 0, 32);
+    memset(acreedor, 0, 32);
+    memset(saldo, 0, 32);
+  }
+  if(clipro)
+  {
+    get_data(deudor , recIndex, descr[16].fieldname, fPtr, head, descr);
+    get_data(acreedor , recIndex, descr[17].fieldname, fPtr, head, descr);
+    subFields(saldo, deudor, acreedor);
+    rightAlign(saldo, descr[16].length);
+    mvprintw(16 + yPos, xPos + (6 - strlen(descr[descr_index].fieldname) + 21), "%s", saldo);
+  }
+  else if(prove)
+  {
+    get_data(deudor , recIndex, descr[13].fieldname, fPtr, head, descr);
+    get_data(acreedor , recIndex, descr[12].fieldname, fPtr, head, descr);
+    subFields(saldo, deudor, acreedor);
+    rightAlign(saldo, descr[13].length);
+    mvprintw(12 + yPos, xPos + (6 - strlen(descr[descr_index].fieldname) + 21), "%s", saldo);
+  }
+  while(descr[descr_index].fieldname[0] != TERMINATOR) 
+  {
+    get_data(buffer , recIndex, descr[descr_index].fieldname, fPtr, head, descr);
+    
+    if(descr[descr_index].type == 'D') dateRectifier(buffer);
+
+    mvprintw(descr_index + yPos, xPos + (6 - strlen(descr[descr_index].fieldname)), "%s: %s", descr[descr_index].fieldname, buffer);
+    memset(buffer, 0, MAX_FIELD_LENGTH + 1); 
+    descr_index++;
+  }
+  return;
 }
 
 static void pRecord(const char* arch, const char* iField, const int xPos, const int yPos)
@@ -235,27 +440,7 @@ static void pRecord(const char* arch, const char* iField, const int xPos, const 
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-
   
-  
-/*
-
-  
-  while(descr[descr_index].fieldname[0] != TERMINATOR)
-  {
-    if(maxDescrSize < descr_index)
-    {
-      maxDescrSize = descr[descr_index].length;
-    }
-    nOfDescr++;
-    descr_index++;
-  }
-  
-  int wid = FIELD_NAME + maxDescrSize; //maybe + 1
-  int hei = nOfDescr + 2;
-  
-  recuadro(xPos - 1, yPos - 1, wid, hei);
-*/
   int key = 1;
   
   if(stock != 0)
@@ -347,7 +532,7 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
   header head[1];
   descriptor descr[25];
   char fieldname[25][14] = {0}; // test to see if i can add ':'
-  int nofdescr = 0;
+  size_t nOfDescr = 0;
   int indice = 0;
   
   fPtr = fopen(fName, "rb");
@@ -358,7 +543,7 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
     return;
   }
 
-  store_header_data(head, fPtr, 0);
+  nOfDescr = store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
 
   for(int i = 0; descr[i].fieldname[0] != 0x0d && i < 25; i++)
@@ -367,17 +552,28 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
 	  fieldname[i][strlen(fieldname[i])] = ':';
 	  fieldname[i][strlen(fieldname[i])] = ' ';
     init_input_field(&field[i], fieldname[i], descr[i].length, false, xPos + (6 - strlen(fieldname[i])), yPos + i, fType[i]);
-	  nofdescr++;
+	  //nOfDescr++;
   }
-  mvprintw(0, 0, "%d %x", nofdescr, descr[nofdescr - 1].fieldname);
+  mvprintw(0, 0, "%d %x", nOfDescr, descr[nOfDescr - 1].fieldname);
 
-  input_fields_loop(field, 1, NULL);
+  int cancel = input_fields_loop(field, 1, NULL);
 
+  if(cancel) 
+  {
+    return;
+	}
+  char espacios[10] = {0};
+  int verificacion = !strncmp(field[0].input_buffer, espacios, descr[0].length);
+  if(verificacion)
+	{
+    return;
+	}
+	rightAlign(field[0].input_buffer, descr[0].length); //All product codes are right aligned so any comparison 
   indice = get_index(descr[0].fieldname, field[0].input_buffer, fPtr, head, descr);
   if(indice >= 0)
   {
-    mvprintw(0, 0, "Ya existe un cliente con este numero");
-    mvprintw(1, 0, "%d", indice);
+    mvprintw(3, 7, "Ya existe un cliente con este numero");
+    mvprintw(4, 7, "%d", indice);
 	getch();
 	return;
   }
@@ -389,11 +585,11 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
     return;
   }
   
-  input_fields_loop(&field[1], nofdescr - 1, NULL);
+  input_fields_loop(&field[1], nOfDescr - 1, NULL);
   
   // check for data
   
-  for(int i = 0; i < nofdescr; i++)
+  for(int i = 0; i < nOfDescr; i++)
   {
     if(field[i].type == STRING || field[i].type == CAP)
     {
@@ -466,6 +662,7 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
 
   input_fields_loop(field, 1, NULL);
 
+  if(fType[0] == INTEGER) rightAlign(field[0].input_buffer, descr[0].length);
   indice = get_index(descr[0].fieldname, field[0].input_buffer, fPtr, head, descr);
   if(indice < 0)
   {
@@ -490,7 +687,7 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
     }
     memset(fieldData, 0, sizeof(fieldData));
     field[i].count = descr[i].length;
-    //field[i].cursor_pos = field[i].count; /*Uncomment if you want to make the cursosr start at the end*/
+    //field[i].cursor_pos = field[i].count; //Uncomment if you want to make the cursosr start at the end
   }
   
   if (fclose(fPtr) != 0) 
@@ -549,23 +746,32 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
     getch();
     return;
   }
-getch();
+  
   return;
 }
 
-//Extracts into a buffer the fields that match exactly with my search criteria
-static int extCoinFields(const char* fName, char** fields, const size_t nOfFields, char* buffer, const char* toMatch, const char* fieldName)
+//remade extNeqFields for Extracting Clients who have debts
+static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
 {
-  int err;
+  const size_t nOfFields = 4;
+  //int nOfIndUnion = 0;
+  int nOfIndAcr = 0;
+  int nOfIndDeu = 0;
   FILE* fPtr = NULL;
   descriptor descr[25];
   header head[1];
-  int indices[FILTER_BUFFER_SIZE];
+  int indicesAcr[FILTER_BUFFER_SIZE];
+  int indicesDeu[FILTER_BUFFER_SIZE];
+  int indicesUnion[FILTER_BUFFER_SIZE];
   int nOfIndexes = 0;
   size_t off = 0;
-  char fieldType[25];
   int fieldSizes[25] = {0};
-  memset(indices, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  char acree[25] = {0};
+  char deudo[25] = {0};
+  
+  memset(indicesAcr, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  memset(indicesDeu, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  memset(indicesUnion, -1, FILTER_BUFFER_SIZE * sizeof(int));
   
   fPtr = fopen(fName, "rb");
   if(fPtr == NULL)
@@ -581,14 +787,111 @@ static int extCoinFields(const char* fName, char** fields, const size_t nOfField
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
-      if(!strncmp(descr[j].fieldname, fields[i], strlen(fields[i])))
+      if(!strncmp(descr[j].fieldname, fields[i].fieldName, strlen(fields[i].fieldName)))
+      {
+        fieldSizes[i] = descr[j].length;
+      }
+    }
+  }
+  char zero[16] = "0.00";
+  size_t saldoSize = fieldSizes[2] + 1;
+  rightAlign(zero, fieldSizes[2]);
+  nOfIndAcr = get_indexes_neq(indicesAcr, fields[2].fieldName, zero, fPtr, head, descr);
+  if(nOfIndAcr == -1 || nOfIndAcr == -2)
+  {
+    mvprintw(0, 0, "Error: %d", nOfIndAcr);
+  }
+  nOfIndDeu = get_indexes_neq(indicesDeu, fields[3].fieldName, zero, fPtr, head, descr);
+  if(nOfIndDeu == -1 || nOfIndDeu == -2)
+  {
+    mvprintw(0, 0, "Error: %d", nOfIndDeu);
+  }
+  
+  indexSetUnion(indicesAcr, nOfIndAcr, indicesDeu, nOfIndDeu, indicesUnion);
+
+  //unsafe 
+  for(int i = 0; indicesUnion[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  {
+    off = i * head[0].record_bytes; //should be + 1 but the whole idea of extracting fields is to limit the fields shown
+    if(indicesUnion[i] != -1)
+    {
+      for(int j = 0; j < nOfFields; j++)
+      {
+        if(j > 0) 
+        {
+          buffer[off] = '¦';
+          off++;
+        }
+        get_data(&buffer[off], indicesUnion[i], fields[j].fieldName, fPtr, head, descr);
+        if(j == 2)
+        {
+          memcpy(acree, &buffer[off], fieldSizes[j]);
+        }
+        if(j == 3)
+        {
+          memcpy(deudo, &buffer[off], fieldSizes[j]);
+        }        
+        off += fieldSizes[j];
+        if(j == nOfFields - 1)
+        {
+          buffer[off] = '¦';
+          off++;
+          subFields(&buffer[off], deudo, acree);
+          rightAlign(&buffer[off], saldoSize);
+          off += saldoSize;
+        }
+      }
+      buffer[off] = 0;
+      off++;
+    }
+    nOfIndexes++;
+  }
+  
+  if(fclose(fPtr) != 0)
+    {
+    mvprintw(0, 0, "No se pudo cerrar %s", fName);
+    return -2;
+  }
+  
+  return nOfIndexes;
+}
+
+//Extracts into a buffer the fields that match exactly with my search criteria
+static int extCoinFields(const SearchConfig* config, char* buffer, const char* toMatch)
+{
+  int err;
+  FILE* fPtr = NULL;
+  descriptor descr[25];
+  header head[1];
+  int indices[FILTER_BUFFER_SIZE];
+  int nOfIndexes = 0;
+  size_t off = 0;
+  char fieldType[25];
+  int fieldSizes[25] = {0};
+  memset(indices, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  
+  fPtr = fopen(config->fName, "rb");
+  if(fPtr == NULL)
+  {
+    mvprintw(0, 0, "No se pudo abrir %s", config->fName);
+    return -1;
+  }
+  
+  store_header_data(head, fPtr, 0);
+  store_descriptor_data(descr, fPtr);
+  
+  for(int i = 0; i < config->nOfFields; i++)
+  {
+    for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
+    {
+      if(!strncmp(descr[j].fieldname, config->fields[i].fieldName, strlen(config->fields[i].fieldName)))
       {
         fieldSizes[i] = descr[j].length;
         fieldType[i] = descr[j].type;
       }
     }
   }
-  err = get_indexes(indices, fieldName, toMatch, fPtr, head, descr);
+  err = get_indexes(indices, config->fieldName, toMatch, fPtr, head, descr);
   if(err)
   {
     mvprintw(0, 0, "Error: %d", err);
@@ -599,37 +902,53 @@ static int extCoinFields(const char* fName, char** fields, const size_t nOfField
   {
     if(indices[i] != -1)
     {
-      for(int j = 0; j < nOfFields; j++)
+      for(int j = 0; j < config->nOfFields; j++)
       {
         if(j > 0) 
         {
           buffer[off] = ' ';
           off++;
         }
-        get_data(&buffer[off], indices[i], fields[j], fPtr, head, descr);
+        get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
         if(fieldType[j] == 'D')
         {
           dateRectifier(&buffer[off]);
           off += 2; // the date bars
+          if(config->fields[j].setting == YEAR_OFF) 
+          {
+            off -= 5;
+          }
         }
         off += fieldSizes[j];
       }
-      buffer[off] = 0;
-      off++;
+			if(!config->extraSpace)
+      {
+        buffer[off] = 0;
+        off++;
+			}
+			else
+      {
+        buffer[off] = ' ';
+        off++;
+				memset(&buffer[off], '*', config->extraSpace);
+				off += config->extraSpace;
+        buffer[off] = 0;
+        off++;
+			}
     }
     nOfIndexes++;
   }
   
   if(fclose(fPtr) != 0)
     {
-    mvprintw(0, 0, "No se pudo cerrar %s", fName);
+    mvprintw(0, 0, "No se pudo cerrar %s", config->fName);
     return -2;
   }
   
   return nOfIndexes;
 }
 
-static int extGrFields(const char* fName, char** fields, const size_t nOfFields, char* buffer, const char* toMatch, const char* fieldName)
+static int extNeqFields(const SearchConfig* config, char* buffer, const char* toMatch)
 {
   int err;
   FILE* fPtr = NULL;
@@ -642,144 +961,87 @@ static int extGrFields(const char* fName, char** fields, const size_t nOfFields,
   int fieldSizes[25] = {0};
   memset(indices, -1, FILTER_BUFFER_SIZE * sizeof(int));
   
-  fPtr = fopen(fName, "rb");
+  fPtr = fopen(config->fName, "rb");
   if(fPtr == NULL)
   {
-    mvprintw(0, 0, "No se pudo abrir %s", fName);
+    mvprintw(0, 0, "No se pudo abrir %s", config->fName);
     return -1;
   }
   
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-  for(int i = 0; i < nOfFields; i++)
+  for(int i = 0; i < config->nOfFields; i++)
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
-      if(!strncmp(descr[j].fieldname, fields[i], strlen(fields[i])))
+      if(!strncmp(descr[j].fieldname, config->fields[i].fieldName, strlen(config->fields[i].fieldName)))
       {
         fieldSizes[i] = descr[j].length;
         fieldType[i] = descr[j].type;
       }
     }
   }
-  err = get_indexes_gr_th(indices, fieldName, toMatch, fPtr, head, descr);
+  err = get_indexes_neq(indices, config->fieldName, toMatch, fPtr, head, descr);
   if(err)
   {
     mvprintw(0, 0, "Error: %d", err);
-    return -2; 
+    
   }
 
   for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
   {
     if(indices[i] != -1)
     {
-      for(int j = 0; j < nOfFields; j++)
+      for(int j = 0; j < config->nOfFields; j++)
       {
         if(j > 0) 
         {
           buffer[off] = ' ';
           off++;
         }
-        get_data(&buffer[off], indices[i], fields[j], fPtr, head, descr);
+        get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
+        //on -O3 it is not working correctly
+
         if(fieldType[j] == 'D')
         {
           dateRectifier(&buffer[off]);
           off += 2; // the date bars
+          if(config->fields[j].setting == YEAR_OFF) 
+          {
+            off -= 5;
+          }
         }
         off += fieldSizes[j];
       }
-      buffer[off] = 0;
-      off++;
+			if(!config->extraSpace)
+      {
+        buffer[off] = 0;
+        off++;
+			}
+			else
+      {
+        buffer[off] = ' ';
+        off++;
+				memset(&buffer[off], '*', config->extraSpace);
+				off += config->extraSpace;
+        buffer[off] = 0;
+        off++;
+			}
     }
     nOfIndexes++;
   }
   
   if(fclose(fPtr) != 0)
     {
-    mvprintw(0, 0, "No se pudo cerrar %s", fName);
+    mvprintw(0, 0, "No se pudo cerrar %s", config->fName);
     return -2;
   }
   
   return nOfIndexes;
 }
 
-static int extLowFields(const char* fName, char** fields, const size_t nOfFields, char* buffer, const char* toMatch, const char* fieldName)
-{
-  int err;
-  FILE* fPtr = NULL;
-  descriptor descr[25];
-  header head[1];
-  int indices[FILTER_BUFFER_SIZE];
-  int nOfIndexes = 0;
-  size_t off = 0;
-  char fieldType[25];
-  int fieldSizes[25] = {0};
-  
-  memset(indices, -1, FILTER_BUFFER_SIZE * sizeof(int));
-  
-  fPtr = fopen(fName, "rb");
-  if(fPtr == NULL)
-  {
-    mvprintw(0, 0, "No se pudo abrir %s", fName);
-    return -1;
-  }
-  
-  store_header_data(head, fPtr, 0);
-  store_descriptor_data(descr, fPtr);
-  
-  for(int i = 0; i < nOfFields; i++)
-  {
-    for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
-    {
-      if(!strncmp(descr[j].fieldname, fields[i], strlen(fields[i])))
-      {
-        fieldSizes[i] = descr[j].length;
-        fieldType[i] = descr[j].type;
-      }
-    }
-  }
-  err = get_indexes_lw_th(indices, fieldName, toMatch, fPtr, head, descr);
-  if(err)
-  {
-    mvprintw(0, 0, "Error: %d", err);
-  }
-
-  for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
-  {
-    if(indices[i] != -1)
-    {
-      for(int j = 0; j < nOfFields; j++)
-      {
-        if(j > 0) 
-        {
-          buffer[off] = ' ';
-          off++;
-        }
-        get_data(&buffer[off], indices[i], fields[j], fPtr, head, descr);
-        if(fieldType[j] == 'D')
-        {
-          dateRectifier(&buffer[off]);
-          off += 2; // the date bars
-        }
-        off += fieldSizes[j];
-      }
-      buffer[off] = 0;
-      off++;
-    }
-    nOfIndexes++;
-  }
-  
-  if(fclose(fPtr) != 0)
-    {
-    mvprintw(0, 0, "No se pudo cerrar %s", fName);
-    return -2;
-  }
-  
-  return nOfIndexes;
-}
-
-static int extBetwFields(const char* fName, char** fields, const size_t nOfFields, char* buffer, const char* low, const char* high, const char* fieldName)
+static int extGrFields(const SearchConfig* config, char* buffer, const char* toMatch)
 {
   int err;
   FILE* fPtr = NULL;
@@ -793,28 +1055,28 @@ static int extBetwFields(const char* fName, char** fields, const size_t nOfField
   
   memset(indices, -1, FILTER_BUFFER_SIZE * sizeof(int));
   
-  fPtr = fopen(fName, "rb");
+  fPtr = fopen(config->fName, "rb");
   if(fPtr == NULL)
   {
-    mvprintw(0, 0, "No se pudo abrir %s", fName);
+    mvprintw(0, 0, "No se pudo abrir %s", config->fName);
     return -1;
   }
   
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-  for(int i = 0; i < nOfFields; i++)
+  for(int i = 0; i < config->nOfFields; i++)
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
-      if(!strncmp(descr[j].fieldname, fields[i], strlen(fields[i])))
+      if(!strncmp(descr[j].fieldname, config->fields[i].fieldName, strlen(config->fields[i].fieldName)))
       {
         fieldSizes[i] = descr[j].length;
         fieldType[i] = descr[j].type;
       }
     }
   }
-  err = get_indexes_betw(indices, fieldName, low, high, fPtr, head, descr);
+  err = get_indexes_gr_th(indices, config->fieldName, toMatch, fPtr, head, descr);
   if(err)
   {
     mvprintw(0, 0, "Error: %d", err);
@@ -824,37 +1086,241 @@ static int extBetwFields(const char* fName, char** fields, const size_t nOfField
   {
     if(indices[i] != -1)
     {
-      for(int j = 0; j < nOfFields; j++)
+      for(int j = 0; j < config->nOfFields; j++)
       {
         if(j > 0) 
         {
           buffer[off] = ' ';
           off++;
         }
-        get_data(&buffer[off], indices[i], fields[j], fPtr, head, descr);
+        get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
+        //on -O3 it is not working correctly
+
         if(fieldType[j] == 'D')
         {
           dateRectifier(&buffer[off]);
           off += 2; // the date bars
+          if(config->fields[j].setting == YEAR_OFF) 
+          {
+            off -= 5;
+          }
         }
         off += fieldSizes[j];
       }
-      buffer[off] = 0;
-      off++;
+			if(!config->extraSpace)
+      {
+        buffer[off] = 0;
+        off++;
+			}
+			else
+      {
+        buffer[off] = ' ';
+        off++;
+				memset(&buffer[off], '*', config->extraSpace);
+				off += config->extraSpace;
+        buffer[off] = 0;
+        off++;
+			}
     }
     nOfIndexes++;
   }
-  
   if(fclose(fPtr) != 0)
-    {
-    mvprintw(0, 0, "No se pudo cerrar %s", fName);
+  {
+    mvprintw(0, 0, "No se pudo cerrar %s", config->fName);
     return -2;
   }
   
   return nOfIndexes;
 }
+
+static int extLowFields(const SearchConfig* config, char* buffer, const char* toMatch)
+{
+  int err;
+  FILE* fPtr = NULL;
+  descriptor descr[25];
+  header head[1];
+  int indices[FILTER_BUFFER_SIZE];
+  int nOfIndexes = 0;
+  size_t off = 0;
+  char fieldType[25];
+  int fieldSizes[25] = {0};
+  
+  memset(indices, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  
+  fPtr = fopen(config->fName, "rb");
+  if(fPtr == NULL)
+  {
+    mvprintw(0, 0, "No se pudo abrir %s", config->fName);
+    return -1;
+  }
+  
+  store_header_data(head, fPtr, 0);
+  store_descriptor_data(descr, fPtr);
+  
+  for(int i = 0; i < config->nOfFields; i++)
+  {
+    for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
+    {
+      if(!strncmp(descr[j].fieldname, config->fields[i].fieldName, strlen(config->fields[i].fieldName)))
+      {
+        fieldSizes[i] = descr[j].length;
+        fieldType[i] = descr[j].type;
+      }
+    }
+  }
+  err = get_indexes_lw_th(indices, config->fieldName, toMatch, fPtr, head, descr);
+  if(err)
+  {
+    mvprintw(0, 0, "Error: %d", err);
+  }
+
+  for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  {
+    if(indices[i] != -1)
+    {
+      for(int j = 0; j < config->nOfFields; j++)
+      {
+        if(j > 0) 
+        {
+          buffer[off] = ' ';
+          off++;
+        }
+        get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
+        //on -O3 it is not working correctly
+
+        if(fieldType[j] == 'D')
+        {
+          dateRectifier(&buffer[off]);
+          off += 2; // the date bars
+          if(config->fields[j].setting == YEAR_OFF) 
+          {
+            off -= 5;
+          }
+        }
+        off += fieldSizes[j];
+      }
+			if(!config->extraSpace)
+      {
+        buffer[off] = 0;
+        off++;
+			}
+			else
+      {
+        buffer[off] = ' ';
+        off++;
+				memset(&buffer[off], '*', config->extraSpace);
+				off += config->extraSpace;
+        buffer[off] = 0;
+        off++;
+			}
+    }
+    nOfIndexes++;
+  }
+  
+  if(fclose(fPtr) != 0)
+  {
+    mvprintw(0, 0, "No se pudo cerrar %s", config->fName);
+    return -2;
+  }
+  
+  return nOfIndexes;
+}
+
+static int extBetwFields(const SearchConfig* config , char* buffer, const char* low, const char* high)
+{
+
+  int err;
+  FILE* fPtr = NULL;
+  descriptor descr[25];
+  header head[1];
+  int indices[FILTER_BUFFER_SIZE];
+  int nOfIndexes = 0;
+  size_t off = 0;
+  char fieldType[25];
+  int fieldSizes[25] = {0};
+  
+  //I'm using -1 as a marker for an empty field, since index numbers begins at 0
+  memset(indices, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  
+  fPtr = fopen(config->fName, "rb");
+  if(fPtr == NULL)
+  {
+    mvprintw(0, 0, "No se pudo abrir %s", config->fName);
+    return -1;
+  }
+  
+  store_header_data(head, fPtr, 0);
+  store_descriptor_data(descr, fPtr);
+  
+  for(int i = 0; i < config->nOfFields; i++)
+  {
+    for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
+    {
+      if(!strncmp(descr[j].fieldname, config->fields[i].fieldName, strlen(config->fields[i].fieldName)))
+      {
+        fieldSizes[i] = descr[j].length;
+        fieldType[i] = descr[j].type;
+      }
+    }
+  }
+  err = get_indexes_betw(indices, config->fieldName, low, high, fPtr, head, descr);
+  if(err)
+  {
+    mvprintw(0, 0, "Error: %d", err);
+  }
+
+  for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  {
+    if(indices[i] != -1)
+    {
+      for(int j = 0; j < config->nOfFields; j++)
+      {
+        if(j > 0) 
+        {
+          buffer[off] = ' ';
+          off++;
+        }
+        get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
+        //on -O3 it is not working correctly
+
+        if(fieldType[j] == 'D')
+        {
+          dateRectifier(&buffer[off]);
+          off += 2; // the date bars
+          if(config->fields[j].setting == YEAR_OFF) 
+          {
+            off -= 5;
+          }
+        }
+        off += fieldSizes[j];
+      }
+			if(!config->extraSpace)
+      {
+        buffer[off] = 0;
+        off++;
+			}
+			else
+      {
+        buffer[off] = ' ';
+        off++;
+				memset(&buffer[off], '*', config->extraSpace);
+				off += config->extraSpace;
+        buffer[off] = 0;
+        off++;
+			}
+    }
+    nOfIndexes++;
+  }
+  if(fclose(fPtr) != 0)
+    {
+    mvprintw(0, 0, "No se pudo cerrar %s", config->fName);
+    return -2;
+  }
+  
+  return nOfIndexes;
+}
+
 //El Proposito de esta funcion es pasarle un buffer, los campos y que me haga el scroller 
-
 static void vScroller(char* buffer,
                       int startX, 
                       int startY,
@@ -912,6 +1378,65 @@ static void vScroller(char* buffer,
   return;
 }
 
+static void vScroller2(char* buffer,
+                      int startX, 
+                      int startY,
+                      int height,
+                      int nOfIndexes,
+                      int* index, 
+                      header* head)
+{
+  int startOff = 0;
+  int yOff = 0;
+  int key = 0;
+  if(height > nOfIndexes) height = nOfIndexes;
+
+  
+  while(key != KEY_ENTER)
+  {
+
+    yOff = startOff;
+    move(startY, startX);
+    for(int curRow = 0; curRow < height && yOff < nOfIndexes; curRow++)
+    {
+      printw("%s\n", &buffer[(index[yOff]) * head[0].record_bytes]);
+      yOff++;
+    }
+    key = getch();
+    
+    if(key == KEY_UP && nOfIndexes > height)
+    {
+      if(startOff > 0) 
+      {
+        startOff--;
+      }
+      else
+      {
+        startOff = 0;
+      }
+    }
+    else if(key == KEY_DOWN && nOfIndexes > height)
+    {
+      if(nOfIndexes > yOff) 
+      {
+        startOff++;
+      }
+      else
+      {
+        startOff = yOff - height;
+      }
+    }
+    
+    if(key == KEY_ENTER || key == '\n' || key == PADENTER || key == 27)
+    {
+      break;
+    }
+  }
+  
+  return;
+}
+
+
 /*
 Esta funcion es para todas las opciones de salida por IMPRESORA 
 que se reimplementó para que lo guarde en un archivo de texto
@@ -958,7 +1483,8 @@ void consulta_operacion(){
   char buffer[MAX_FIELD_LENGTH + 1] = {0};
   char memoBuff[MEMOBLOCKSIZE + 1] = {0};
 
-  init_input_field(&entrada[0], "Operacion: ", 4, false, 5, 2, STRING);
+  init_input_field(&entrada[0], "Operacion:   ", 4, false, 5, 2, STRING);
+  operaciones();
 
   input_fields_loop(entrada, entradas, operaciones);
 
@@ -1052,16 +1578,7 @@ void consulta_operacion(){
   readMemo(memoBuff,"CTASCTES.DBT", blockNum);
   wprintw(win,"%s", memoBuff);
   wrefresh(win);
-
   endwin();
-
-  mvprintw(0, 0, "Representacion en hexadecimal: %x %x %x %x %x %x ",
-    entrada[0].input_buffer[0], 
-    entrada[0].input_buffer[1], 
-    entrada[0].input_buffer[2], 
-    entrada[0].input_buffer[3], 
-    entrada[0].input_buffer[4], 
-    entrada[0].input_buffer[5]);
   
   free(entrada[0].prompt);
   if (fclose(ctasctes_ptr) != 0) 
@@ -1078,68 +1595,38 @@ void consulta_operacion(){
 
 void consulta_compra()
 {
-
-  
   header compras_head[1]; 
   descriptor compras_descr[MAX_DBF_FIELDS];
-
   InputField entrada[1];
-  
   int entradas = 1;
-
   FILE *compras_ptr = NULL;
-
   int indice = 0;
-  
   char buffer[254];
-
   memset(buffer, 0, 254);
   char memoBuff[MEMOBLOCKSIZE + 1] = {0};
 
-
   init_input_field(&entrada[0], "Operacion: ", 4, false, 5, 2, STRING);
 
-
-  input_fields_loop(entrada, entradas, operaciones);
-
-
-
   operaciones();
-
+  input_fields_loop(entrada, entradas, operaciones);
+  operaciones();
 
   refresh();
 
-
-
-
-
- 
-
-
  compras_ptr = fopen("COMPRA.DBF", "rb");
-
-  
 if (compras_ptr == NULL) 
   {
-
-
     mvprintw(0,0,"error abriendo COMPRA.DBF: %s", strerror(errno));
     getch();
     return;
   }
 
-
-
   store_header_data(compras_head, compras_ptr, 0);
-
-
   store_descriptor_data(compras_descr, compras_ptr);
 
   rightAlign(entrada[0].input_buffer, compras_descr[0].length);
 
-  indice = get_index("ORDCOM", entrada[0].input_buffer, compras_ptr, compras_head, 
-
-compras_descr);
+  indice = get_index("ORDCOM", entrada[0].input_buffer, compras_ptr, compras_head, compras_descr);
 
   if(indice ==  -1)
   {
@@ -1148,113 +1635,47 @@ compras_descr);
     return;
   }
   
-  get_data(buffer, indice, compras_descr[0].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[0].fieldname, compras_ptr, compras_head, compras_descr); 
   mvprintw(2, 17, "%s", buffer);
 
-
-
-
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[1].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
-  mvprintw(2, 35, "%c%c-%c%c-%c%c", buffer[6], buffer[7], buffer[4], buffer[5], buffer[2], buffer
-
-[3]);
-
-
-
+  get_data(buffer, indice, compras_descr[1].fieldname, compras_ptr, compras_head, compras_descr);
+  mvprintw(2, 35, "%c%c-%c%c-%c%c", buffer[6], buffer[7], buffer[4], buffer[5], buffer[2], buffer[3]);
+  
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[2].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[2].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(2, 60, "%s", buffer);
-
-
-
+  
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[3].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[3].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(4, 19, "%s", buffer);
 
-
-
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[4].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[4].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(4, 48, "%s", buffer);
-
-
-
+  
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[11].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[11].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(9, 48, "%s", buffer);
 
-
-
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[12].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[12].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(10, 48, "%s", buffer);
 
-
-
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[13].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[13].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(17, 11, "%s", buffer);
 
-
-
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[14].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[14].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(17, 28, "%s", buffer);
 
-
-
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[15].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[15].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(17, 46, "%s", buffer);
 
-
-
   memset(buffer, 0, 254);
-
-  get_data(buffer, indice, compras_descr[16].fieldname, compras_ptr, compras_head, 
-
-compras_descr);
-
+  get_data(buffer, indice, compras_descr[16].fieldname, compras_ptr, compras_head, compras_descr);
   mvprintw(17, 66, "%s", buffer);
 
   memset(buffer, 0, 254);
@@ -1282,23 +1703,15 @@ compras_descr);
 
   endwin();
 
-
-
-  
-
+/*
 mvprintw(0, 0, "Representacion en hexadecimal: %x %x %x %x %x %x ",
      entrada[0].input_buffer[0],
-     
-
-entrada[0].input_buffer[1],
+     entrada[0].input_buffer[1],
      entrada[0].input_buffer[2],
      entrada[0].input_buffer[3],
-     entrada
-
-[0].input_buffer[4],
+     entrada[0].input_buffer[4],
      entrada[0].input_buffer[5]);
-
-
+*/
 
   free(entrada[0].prompt);
   if (fclose(compras_ptr) != 0) 
@@ -1309,13 +1722,239 @@ entrada[0].input_buffer[1],
     return;
   }
   getch();
-
-
   return;
-
 }
 
-void ultimas_op_cli(){
+void saldoEnOperaciones(char* operaciones, descriptor* descr, size_t nOfInd)
+{
+  const size_t len = strnlen(operaciones, 500) +1; // len Should be smaller than 500
+  //char saldoAnt[24] = {0};
+  char campo[6][32];
+  char saldo[24] = {0};
+  const char clientes[] = "ACREE";
+  const char proveedores[] = "PACREE";
+  int compClientes;
+  int compProveedores;
+  size_t offsetDinero = 0;
+  for(int i = 0; i < 25 && descr[i].fieldname[0] != TERMINATOR; i++)
+  {
+    compClientes = !strncmp(descr[i].fieldname, clientes, strnlen(clientes, 11));
+    compProveedores = !strncmp(descr[i].fieldname, proveedores, strnlen(proveedores, 11));
+    if(compClientes)
+    {
+      offsetDinero = i;
+      break;
+    }
+    else if(compProveedores)
+    {
+      offsetDinero = i;
+      break;
+    }
+  }
+  size_t offsets[9];
+  offsets[0] = 0;
+  offsets[1] = descr[0].length +1;
+  offsets[2] = offsets[1] + 6 + descr[2].length + 1;
+  offsets[3] = offsets[2] + descr[offsetDinero].length + 1;
+  offsets[4] = offsets[3] + descr[offsetDinero + 1].length + 1;
+  offsets[5] = offsets[4] + descr[offsetDinero + 2].length + 1;
+  offsets[6] = offsets[5] + descr[offsetDinero + 3].length + 1;
+  offsets[7] = offsets[6] + descr[offsetDinero + 4].length + 1;
+  offsets[8] = offsets[7] + descr[offsetDinero + 5].length + 1;
+  
+
+
+  for(int i = 0; i < nOfInd; i++)
+  {
+    for(int j = 0; j < 6; j++)
+    {
+      memset(campo[j], 0, 32);
+      //memset(saldoAnt, 0, 24);
+      //memset(saldo, 0, 24);
+      memcpy(campo[j], &operaciones[i* len + offsets[j + 2]], descr[j + offsetDinero].length);
+    }
+    sumFields(saldo, campo[0], saldo);
+    subFields(saldo, campo[1], saldo);
+    subFields(saldo, campo[2], saldo);
+    subFields(saldo, campo[3], saldo);
+    sumFields(saldo, campo[4], saldo);
+    sumFields(saldo, campo[5], saldo);
+    
+    rightAlign(saldo, descr[10].length + 2);
+
+    memcpy(&operaciones[i * len + offsets[8]], saldo, descr[10].length + 2);
+  }
+  //set the offsets
+  return;
+}
+
+void opsCliPorImpresora()
+{
+  const int indexAlloc = 500;
+  header ctasHead[1];
+  descriptor ctasDescr[MAX_DBF_FIELDS];
+  InputField entrada[1];
+  int entradas = 1;
+  FILE *ctasPtr = NULL;
+  int nOfInd;
+
+  init_input_field(&entrada[0], "Cliente: ", 4, false, 0, 0, STRING);
+  clear();
+  input_fields_loop(entrada, entradas, operaciones);
+
+  ctasPtr = fopen("CTASCTES.DBF", "rb");
+
+  if (ctasPtr == NULL) 
+  {
+    perror("error abriendo CTASCTES.dbf");
+    return;
+  }
+
+  store_header_data(ctasHead, ctasPtr, 0);
+  store_descriptor_data(ctasDescr, ctasPtr);
+
+  rightAlign(entrada[0].input_buffer, ctasDescr[3].length);
+
+  char *dbfData = (char *)malloc((ctasHead[0].record_bytes) * indexAlloc); // basically assuming no more than 500 records for 1 client 
+  
+  SearchFields campos[] = 
+  {
+    {"OPERAC"},
+    {"FECHA", YEAR_OFF},
+    {"FACTUR"},
+    {"ACREE"},
+    {"DEUDO"},
+    {"ECHEQ"},
+    {"EEFEC"},
+    {"RCHEQ"},
+    {"REFEC"}
+  };
+
+  SearchConfig config[1] = 
+  {
+    INIT_SEARCH_CONFIG(
+                        .fName = "CTASCTES.DBF",
+												.nOfFields = 9,
+												.fields = campos,
+												.fieldName = "NROCLI",
+												.extraSpace = 12
+                      )
+  };
+  
+  nOfInd = extCoinFields(config, dbfData, entrada[0].input_buffer);
+
+  saldoEnOperaciones(dbfData, ctasDescr, nOfInd);
+
+  flushToFile(dbfData, strnlen(dbfData, 150), nOfInd);
+  if(fclose(ctasPtr) != 0)
+  {
+    mvprintw(0, 0, "Error al cerrar CTASCTES.DBF");
+    getch();
+    return;
+  }
+  free(entrada[0].prompt);
+  free(dbfData);
+  return;
+}
+
+void ultimas_op_cli()
+{
+  const int indexAlloc = 500;
+  header ctasHead[1];
+  descriptor ctasDescr[MAX_DBF_FIELDS];
+  InputField entrada[1];
+  int entradas = 1;
+  FILE *ctasPtr = NULL;
+  char buffer[254] = {0};
+  int nOfInd;
+  int index[indexAlloc];
+  memset(buffer, 0, 254);
+
+  init_input_field(&entrada[0], "Cliente: ", 4, false, 0, 0, STRING);
+  clear();
+  input_fields_loop(entrada, entradas, operaciones);
+
+  ctasPtr = fopen("CTASCTES.DBF", "rb");
+
+  if (ctasPtr == NULL) 
+  {
+    perror("error abriendo CTASCTES.dbf");
+    return;
+  }
+
+  store_header_data(ctasHead, ctasPtr, 0);
+  store_descriptor_data(ctasDescr, ctasPtr);
+
+  rightAlign(entrada[0].input_buffer, ctasDescr[3].length);
+
+  char *dbfData = (char *)malloc((ctasHead[0].record_bytes) * indexAlloc); // basically assuming no more than 500 records for 1 client 
+  
+  SearchFields campos[] = 
+  {
+    {"OPERAC"},
+    {"FECHA", YEAR_OFF},
+    {"FACTUR"},
+    {"ACREE"},
+    {"DEUDO"},
+    {"ECHEQ"},
+    {"EEFEC"},
+    {"RCHEQ"},
+    {"REFEC"}
+  };
+  char tableNames[][8] = 
+  {
+    {"OP"},
+    {"FECHA"},
+    {"FACTURA"},
+    {"TRAJO"},
+    {"LLEVO"},
+    {"CHE_ENT"},
+    {"EFE_ENT"},
+    {"CHE_REC"},
+    {"EFE_REC"}
+  };
+  int camposSize[] = {3 , 5, 13, 10, 10, 10, 10, 10, 10}; //size of the fields but the first one is minus 1
+
+  SearchConfig config[1] = 
+  {
+    INIT_SEARCH_CONFIG(
+                        .fName = "CTASCTES.DBF",
+												.nOfFields = 9,
+												.fields = campos,
+												.fieldName = "NROCLI",
+												.extraSpace = 12
+                      )
+  };
+  
+  nOfInd = extCoinFields(config, dbfData, entrada[0].input_buffer);
+
+  saldoEnOperaciones(dbfData, ctasDescr, nOfInd);
+  
+  for(int i = 0; i < nOfInd; i++)
+  {
+    index[i] = i;
+  }
+  move(2,0);
+  for(int i = 0; i < 9; i++)
+  {
+    printw("%*.*s", camposSize[i] + 1, camposSize[i] + 1, tableNames[i]);
+  }
+  printw("%*.*s", ctasDescr[10].length + 3, ctasDescr[10].length + 3, "SALDO");
+
+  vScroller(dbfData, 0, 3, 20, nOfInd, index);
+  if(fclose(ctasPtr) != 0)
+  {
+    mvprintw(0, 0, "Error al cerrar CTASCTES.DBF");
+    getch();
+    return;
+  }
+  free(entrada[0].prompt);
+  free(dbfData);
+  return;
+}
+/*
+void ultimas_op_cli()
+{
   header ctasctes_head[1];
   descriptor ctasctes_descr[MAX_DBF_FIELDS];
   InputField entrada[1];
@@ -1325,7 +1964,7 @@ void ultimas_op_cli(){
   char buffer[254] = {0};
   memset(buffer, 0, 254);
 
-   init_input_field(&entrada[0], "Cliente: ", 4, false, 0, 0, STRING);
+  init_input_field(&entrada[0], "Cliente: ", 4, false, 0, 0, STRING);
   clear();
   input_fields_loop(entrada, entradas, operaciones);
 
@@ -1344,7 +1983,6 @@ void ultimas_op_cli(){
 
   rightAlign(entrada[0].input_buffer, ctasctes_descr[3].length);
 
-  char *dbfData = (char *)malloc((ctasctes_head[0].record_bytes) * 500); // basically assuming no more than 500 records for 1 client 
 
   int i = 0; //originally set to 2
   
@@ -1354,6 +1992,7 @@ void ultimas_op_cli(){
     mvprintw(0, 0, "not found");
     return;
   }
+  char *dbfData = (char *)malloc((ctasctes_head[0].record_bytes) * 500); // basically assuming no more than 500 records for 1 client 
   
   get_data(buffer, indice, ctasctes_descr[4].fieldname, ctasctes_ptr, ctasctes_head, ctasctes_descr);
   mvprintw(0, 25, "Cliente: %s", buffer);
@@ -1498,195 +2137,175 @@ refresh();
   free(dbfData);
   return;
 }
+*/
 
-void ultimas_op_com(){
-  header compras_head[1];
-  descriptor compras_descr[MAX_DBF_FIELDS];
+
+void opsComPorImpresora()
+{
+  const int indexAlloc = 500;
+  header comHead[1];
+  descriptor comDescr[MAX_DBF_FIELDS];
   InputField entrada[1];
   int entradas = 1;
-  FILE *compras_ptr = NULL;
-  int indice = 0;
-  char buffer[254] = {0};
-  memset(buffer, 0, 254);
+  FILE *comPtr = NULL;
+  int nOfInd;
 
   init_input_field(&entrada[0], "Cliente: ", 4, false, 0, 0, STRING);
+  clear();
   input_fields_loop(entrada, entradas, operaciones);
 
-  compras_ptr = fopen("COMPRA.DBF", "rb");
+  comPtr = fopen("COMPRA.DBF", "rb");
 
-  if (compras_ptr == NULL) 
+  if (comPtr == NULL) 
   {
-
-    perror("error abriendo compras.dbf");
-
+    perror("error abriendo comCTES.dbf");
     return;
   }
 
-  store_header_data(compras_head, compras_ptr, 0);
-  store_descriptor_data(compras_descr, compras_ptr);
+  store_header_data(comHead, comPtr, 0);
+  store_descriptor_data(comDescr, comPtr);
 
-  rightAlign(entrada[0].input_buffer, compras_descr[3].length);
+  rightAlign(entrada[0].input_buffer, comDescr[3].length);
 
-  char *dbfData = (char *)malloc((compras_head[0].record_bytes) * 500); // basically assuming no more than 500 records for 1 client 
-
-  int i = 0; //originally set to 2
+  char *dbfData = (char *)malloc((comHead[0].record_bytes) * indexAlloc); // basically assuming no more than 500 records for 1 client 
   
-  indice = get_index(compras_descr[3].fieldname, entrada[0].input_buffer, compras_ptr, compras_head, compras_descr);
-  if(indice ==  -1)
+  SearchFields campos[] = 
   {
-    mvprintw(0, 0, "not found");
+    {"ORDCOM"},
+    {"FECHA", YEAR_OFF},
+    {"NROFAC"},
+    {"PACREE"},
+    {"PDEUDO"},
+    {"VECHEQ"},
+    {"VEEFEC"},
+    {"VRCHEQ"},
+    {"VREFEC"}
+  };
+
+  SearchConfig config[1] = 
+  {
+    INIT_SEARCH_CONFIG(
+                        .fName = "COMPRA.DBF",
+												.nOfFields = 9,
+												.fields = campos,
+												.fieldName = "NROPRO",
+												.extraSpace = 12
+                      )
+  };
+  
+  nOfInd = extCoinFields(config, dbfData, entrada[0].input_buffer);
+
+  saldoEnOperaciones(dbfData, comDescr, nOfInd);
+
+  flushToFile(dbfData, strnlen(dbfData, 150), nOfInd);
+  if(fclose(comPtr) != 0)
+  {
+    mvprintw(0, 0, "Error al cerrar COMPRA.DBF");
+    getch();
     return;
   }
-  
-  get_data(buffer, indice, compras_descr[4].fieldname, compras_ptr, compras_head, compras_descr);
-  mvprintw(0, 25, "Cliente: %s", buffer);
-  
-  while(indice < compras_head->nofrecords)
-  {
-
-
-    get_data(buffer, indice, compras_descr[3].fieldname, compras_ptr, compras_head, compras_descr);
-  
-    int comparison = strncmp(buffer, entrada[0].input_buffer, 3); //strncmp didn't work inside of the if statement
-    
-//getch();
-//mvprintw(4, i, "%d %s %s %d", indice, buffer, entrada[0].input_buffer, comparison); 
-//used for logging
-      
-refresh();
-    
-    if(comparison == 0)
-    {
-      
-      memset(buffer, 0, 254);
-      get_record(buffer, indice, compras_ptr, compras_head, compras_descr);
-      memcpy(&dbfData[(i) * compras_head[0].record_bytes], buffer, compras_head[0].record_bytes);
-      
-      i++;
-    
-    }
-    indice++;
-  }
-
-    // dbfData[i * compras_head[0].record_bytes + offset] where i are the rows and j are the columns
-    // offset is the sum of the previous fields in bytes
-
-    mvprintw(0, 50, "Numero de operaciones: %d", i);
-    
-    int scrollSize = 19;
-    int begin = 0; //scroll begin
-    int current = begin;
-    int end = begin + scrollSize; //scroll end
-    int key = 0;
-    
-      while(1) 
-  {
-    current = begin;
-    end = begin + scrollSize;
-    
-    //I might have to add one to printOffset since I want the fields to have a space of separation 
-   
-    for(int j = 4; (current) < (i) && current < end; j++) 
-      {
-      int offset = 1;
-      int printOffset = 1;
-  
-      //mvprintw(j, 0, "the loop executes"); // for debugging
-      
-      //mvprintw(j, 0, "%s", dbfData); //for debugging
-  
-      mvprintw(j, 0, "%.6s ", &dbfData[(current) * compras_head[0].record_bytes] + offset);
-      offset += compras_descr[0].length; //ORDCOM
-      printOffset += compras_descr[0].length;
-      
-      mvprintw(j, printOffset, "%c%c/%c%c ",   dbfData[(current) * compras_head[0].record_bytes + offset + 6],
-                dbfData[(current) * compras_head[0].record_bytes + offset + 7],
-                dbfData[(current) * compras_head[0].record_bytes + offset + 4],
-                dbfData[(current) * compras_head[0].record_bytes + offset + 5]);
-      offset += compras_descr[1].length; //FECHA
-      printOffset += compras_descr[1].length - 2;
-      
-      //mvprintw(j, printOffset, "%.13s ", &dbfData[(current) * compras_head[0].record_bytes + offset]);
-      offset += compras_descr[2].length;  // NROFAC
-      offset += compras_descr[3].length;  // NROPRO
-      offset += compras_descr[4].length;  // NOMBRE
-      offset += compras_descr[5].length;  // DIRECC
-      offset += compras_descr[6].length;  // LOCALI
-      offset += compras_descr[7].length;  // CPOSTA
-      offset += compras_descr[8].length;  // TELEF1
-      offset += compras_descr[9].length;  // TELEF2
-      offset += compras_descr[10].length; // MEMO
-  
-      mvprintw(j, printOffset, "%.10s ", &dbfData[(current) * compras_head[0].record_bytes + offset]);
-      offset += compras_descr[11].length;  // PACREE
-      printOffset += compras_descr[11].length + 1;
-  
-      mvprintw(j, printOffset, "%.10s ", &dbfData[(current) * compras_head[0].record_bytes + offset]);
-      offset += compras_descr[12].length;  // PDEUDO
-      printOffset += compras_descr[12].length + 1;
-  
-      mvprintw(j, printOffset, "%.10s ", &dbfData[(current) * compras_head[0].record_bytes + offset]);
-      offset += compras_descr[13].length;
-      printOffset += compras_descr[13].length + 1;
-  
-      mvprintw(j, printOffset, "%.10s ", &dbfData[(current) * compras_head[0].record_bytes + offset]);
-      offset += compras_descr[14].length;
-      printOffset += compras_descr[14].length + 1;  
-
-      mvprintw(j, printOffset, "%.10s ", &dbfData[(current) * compras_head[0].record_bytes + offset]);
-      offset += compras_descr[15].length;
-      printOffset += compras_descr[15].length + 1;  
-
-      mvprintw(j, printOffset, "%.10s ", &dbfData[(current) * compras_head[0].record_bytes + offset]);
-      offset += compras_descr[16].length;
-      printOffset += compras_descr[16].length + 1;
-      
-      current++;
-      }
-
-    key = getch();
-    
-    if(key == KEY_UP && i > scrollSize)
-    {
-      if(begin > 0) 
-      {
-        begin--;
-      }
-      else
-      {
-        begin = 0;
-      }
-    }
-    else if(key == KEY_DOWN && i > scrollSize)
-    {
-      if(end < i) 
-      {
-        begin++;
-      }
-      else
-      {
-        begin = i - scrollSize;
-      }
-    }
-    
-    if(key == KEY_ENTER || key == '\n' || key == PADENTER || key == 27)
-    {
-      break;
-    }
-  
-
-  }
-  if (fclose(compras_ptr) != 0) 
-  {
-    mvprintw(0, 0, "Error al cerrar el archivo: %s", strerror(errno));
-    return;
-  }
-  
-  refresh();
   free(entrada[0].prompt);
   free(dbfData);
   return;
 }
+
+void ultimasOpCom()
+{
+  const int indexAlloc = 500;
+  header comHead[1];
+  descriptor comDescr[MAX_DBF_FIELDS];
+  InputField entrada[1];
+  int entradas = 1;
+  FILE *comPtr = NULL;
+  char buffer[254] = {0};
+  int nOfInd;
+  int index[indexAlloc];
+  memset(buffer, 0, 254);
+
+  init_input_field(&entrada[0], "Cliente: ", 4, false, 0, 0, STRING);
+  clear();
+  input_fields_loop(entrada, entradas, operaciones);
+
+  comPtr = fopen("COMPRA.DBF", "rb");
+
+  if (comPtr == NULL) 
+  {
+    perror("error abriendo COMPRA.dbf");
+    return;
+  }
+
+  store_header_data(comHead, comPtr, 0);
+  store_descriptor_data(comDescr, comPtr);
+
+  rightAlign(entrada[0].input_buffer, comDescr[3].length);
+
+  char *dbfData = (char *)malloc((comHead[0].record_bytes) * indexAlloc); // basically assuming no more than 500 records for 1 client 
+  
+  SearchFields campos[] = 
+  {
+    {"ORDCOM"},
+    {"FECHA", YEAR_OFF},
+    {"NROFAC"},
+    {"PACREE"},
+    {"PDEUDO"},
+    {"VECHEQ"},
+    {"VEEFEC"},
+    {"VRCHEQ"},
+    {"VREFEC"}
+  };
+
+  SearchConfig config[1] = 
+  {
+    INIT_SEARCH_CONFIG(
+                        .fName = "COMPRA.DBF",
+												.nOfFields = 9,
+												.fields = campos,
+												.fieldName = "NROPRO",
+												.extraSpace = 12
+                      )
+  };
+  
+  char tableNames[][8] = 
+  {
+    {"OP"},
+    {"FECHA"},
+    {"FACTURA"},
+    {"TRAJO"},
+    {"LLEVO"},
+    {"CHE_ENT"},
+    {"EFE_ENT"},
+    {"CHE_REC"},
+    {"EFE_REC"}
+  };
+  int camposSize[] = {5 , 5, 13, 10, 10, 10, 10, 10, 10}; //size of the fields but the first one is minus 1
+
+  nOfInd = extCoinFields(config, dbfData, entrada[0].input_buffer);
+  saldoEnOperaciones(dbfData, comDescr, nOfInd);
+  
+  for(int i = 0; i < nOfInd; i++)
+  {
+    index[i] = i;
+  }
+
+  move(2, 0);
+  for(int i = 0; i < 9; i++)
+  {
+    printw("%*.*s", camposSize[i] + 1, camposSize[i] + 1, tableNames[i]);
+  }
+  printw("%*.*s", comDescr[10].length + 3, comDescr[10].length + 3, "SALDO");
+
+  vScroller(dbfData, 0, 3, 20, nOfInd, index);
+  if(fclose(comPtr) != 0)
+  {
+    mvprintw(0, 0, "Error al cerrar COMPRA.DBF");
+    getch();
+    return;
+  }
+  free(entrada[0].prompt);
+  free(dbfData);
+  return;
+}
+
 
 void agregarCtacte()
 { 
@@ -1759,7 +2378,7 @@ void agregarCtacte()
 
   int iLastOp = atoi(lastOp);
   iLastOp++;
-  snprintf(lastOp, 5,"%d", iLastOp); //I wasn't aware snprintf truncated the input to ensure null termination so size has to be 5
+  snprintf(lastOp, 5,"%4d", iLastOp); //I wasn't aware snprintf truncated the input to ensure null termination so size has to be 5
   //getch();
 
   do
@@ -1791,7 +2410,7 @@ void agregarCtacte()
 
     rightAlign(cabecera[3].input_buffer, ctasctes_descr[3].length);
     exit = strncmp(cabecera[3].input_buffer, "   0", ctasctes_descr[3].length);
-    mvprintw(2, 2, "1%d1", exit);
+    //mvprintw(2, 2, "1%d1", exit);
 
     if (exit == 0)
     {
@@ -2100,15 +2719,15 @@ void agregarOrdCom()
   store_descriptor_data(compra_descr, compra_ptr);
 
   fseek(compra_ptr, -compra_head[0].record_bytes, SEEK_END);
-  int pos = ftell(compra_ptr);
+  //int pos = ftell(compra_ptr);
   fread(lastOp, compra_descr[0].length, 1, compra_ptr);
-
+/*
 mvprintw(5, 0, "");
 for(int i = 0; i < 10; i++)
 {
   printw("%x ", lastOp[i]);
 } 
-
+*/
   if (fclose(compra_ptr) != 0) 
   {
     mvprintw(0, 0, "Error al cerrar el archivo: %s", strerror(errno));
@@ -2152,7 +2771,7 @@ for(int i = 0; i < 10; i++)
 
     rightAlign(cabecera[3].input_buffer, compra_descr[3].length);
     exit = strncmp(cabecera[3].input_buffer, "  0", compra_descr[3].length);
-    mvprintw(2, 2, "1%d1", exit);
+    //mvprintw(2, 2, "1%d1", exit);
 
     if (exit == 0)
     {
@@ -2296,22 +2915,22 @@ refresh();
     off += compra_descr[i].length;
   }
 
-  memcpy(&buffer[off], nombreProv, compra_descr[4].length); //Name of the client
+  memcpy(&buffer[off], nombreProv, compra_descr[4].length); 
   off += compra_descr[4].length;
 
-  memcpy(&buffer[off], direccion, compra_descr[5].length); //Name of the client
+  memcpy(&buffer[off], direccion, compra_descr[5].length); 
   off += compra_descr[5].length;
 
-  memcpy(&buffer[off], localidad, compra_descr[6].length); //Name of the client
+  memcpy(&buffer[off], localidad, compra_descr[6].length);
   off += compra_descr[6].length;
 
-  memcpy(&buffer[off], cPostal, compra_descr[7].length); //Name of the client
+  memcpy(&buffer[off], cPostal, compra_descr[7].length); 
   off += compra_descr[7].length;
 
-  memcpy(&buffer[off], tel1, compra_descr[8].length); //Name of the client
+  memcpy(&buffer[off], tel1, compra_descr[8].length);
   off += compra_descr[8].length;
 
-  memcpy(&buffer[off], tel2, compra_descr[9].length); //Name of the client
+  memcpy(&buffer[off], tel2, compra_descr[9].length);
   off += compra_descr[9].length;
 
   int memoOff = off;
@@ -2337,7 +2956,7 @@ refresh();
   sumFields(cliDeu, operacion[1].input_buffer, cliDeu);
   subFields(cliDeu, operacion[4].input_buffer, cliDeu);
   subFields(cliDeu, operacion[5].input_buffer, cliDeu);
-mvprintw(0, 0, "%s\n%s", cliAcr, cliDeu);
+//mvprintw(0, 0, "%s\n%s", cliAcr, cliDeu);
 
   if(atonum(cliAcr) < 0)
   {
@@ -2349,7 +2968,7 @@ mvprintw(0, 0, "%s\n%s", cliAcr, cliDeu);
     subFields(cliAcr, cliDeu, cliAcr);
     subFields(cliDeu, cliDeu, cliDeu);
   }
-mvprintw(2, 0, "%s\n%s", cliAcr, cliDeu);
+//mvprintw(2, 0, "%s\n%s", cliAcr, cliDeu);
   if(atonum(cliAcr) > atonum(cliDeu))
   {
     subFields(saldo, cliDeu, cliAcr);  
@@ -2417,11 +3036,11 @@ mvprintw(2, 0, "%s\n%s", cliAcr, cliDeu);
 
   }
 
-mvprintw(0, 0, "%s\n%s %x %s", buffer, cabecera[3].input_buffer, pos, lastOp);
-mvprintw(20, 0, "%s", cliAcr);
-printw("\n%s", cliDeu);
-printw("\n%s", saldo);
-getch();
+//mvprintw(0, 0, "%s\n%s %x %s", buffer, cabecera[3].input_buffer, pos, lastOp);
+//mvprintw(20, 0, "%s", cliAcr);
+//printw("\n%s", cliDeu);
+//printw("\n%s", saldo);
+//getch();
   
   free(cabecera[0].prompt);
   free(cabecera[1].prompt);
@@ -2592,7 +3211,7 @@ mvprintw(0, 0, "indice = %d", indice);
     get_data(buffer, indice, ctasctes_descr[5 + i].fieldname, ctasctes_ptr, ctasctes_head, ctasctes_descr);
     memcpy(operacion[i].input_buffer, buffer, ctasctes_descr[5 + i].length);
     operacion[i].count = ctasctes_descr[5 + i].length;
-    operacion[i].cursor_pos = operacion[i].count;
+    //operacion[i].cursor_pos = operacion[i].count;
   }
 
   if (fclose(ctasctes_ptr) != 0) 
@@ -2653,9 +3272,10 @@ mvprintw(0, 0, "indice = %d", indice);
     rightAlign(cliAcr, cli_descr[17].length);
     rightAlign(saldo, cli_descr[16].length);
 
-    mvprintw(13, 51, "           ");
-    mvprintw(14, 51, "           ");
-    mvprintw(14, 64, "           ");
+    mvprintw(13, 51, "            ");
+    mvprintw(14, 51, "            ");
+    mvprintw(13, 64, "            ");
+    mvprintw(14, 64, "            ");
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
@@ -2669,9 +3289,10 @@ mvprintw(0, 0, "indice = %d", indice);
     rightAlign(cliAcr, cli_descr[17].length);
     rightAlign(saldo, cli_descr[16].length);
 
-    mvprintw(13, 51, "           ");
-    mvprintw(14, 51, "           ");
-    mvprintw(14, 64, "           ");
+    mvprintw(13, 51, "            ");
+    mvprintw(14, 51, "            ");
+    mvprintw(13, 64, "            ");
+    mvprintw(14, 64, "            ");
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
@@ -2697,7 +3318,19 @@ mvprintw(0, 0, "indice = %d", indice);
   { 
     edMemoTextbox(memoBuff); // To be changed for something better, but an easy solution for the time being
 
-    replaceMemo("CTASCTES.DBT",memoBuff, blockNum);
+    if(blockNum)
+    {
+      replaceMemo("CTASCTES.DBT",memoBuff, blockNum);
+    }
+    else if(isMemoEmpty(memoBuff) == 0)
+    {
+      blockNum = addMemo("CTASCTES.DBT",memoBuff);
+      char block[15] = {0};
+      snprintf(block, ctasctes_descr[11].length + 1, "%*d", ctasctes_descr[11].length, blockNum);
+      mvprintw(0,0, "BLOCK: x%sx", block);
+      replaceField(block, indice, ctasctes_descr[11].fieldname, ctasctes_ptr, ctasctes_head, ctasctes_descr);
+      getch();
+    }
 
     for(int i = 0; i < 6; i++)
     {
@@ -2889,7 +3522,7 @@ void modCom()
     get_data(buffer, indice, compra_descr[11 + i].fieldname, compra_ptr, compra_head, compra_descr);
     memcpy(operacion[i].input_buffer, buffer, compra_descr[11 + i].length);
     operacion[i].count = compra_descr[11 + i].length;
-    operacion[i].cursor_pos = operacion[i].count;
+    //operacion[i].cursor_pos = operacion[i].count;
   }
 
   if (fclose(compra_ptr) != 0) 
@@ -2950,9 +3583,10 @@ void modCom()
     rightAlign(cliAcr, pro_descr[12].length);
     rightAlign(saldo, pro_descr[13].length);
 
-    mvprintw(13, 51, "           ");
-    mvprintw(14, 51, "           ");
-    mvprintw(14, 64, "           ");
+    mvprintw(13, 51, "            ");
+    mvprintw(14, 51, "            ");
+    mvprintw(13, 64, "            ");
+    mvprintw(14, 64, "            ");
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
@@ -2966,9 +3600,10 @@ void modCom()
     rightAlign(cliAcr, pro_descr[12].length);
     rightAlign(saldo, pro_descr[13].length);
 
-    mvprintw(13, 51, "           ");
-    mvprintw(14, 51, "           ");
-    mvprintw(14, 64, "           ");
+    mvprintw(13, 51, "            ");
+    mvprintw(14, 51, "            ");
+    mvprintw(13, 64, "            ");
+    mvprintw(14, 64, "            ");
 
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
@@ -2994,7 +3629,19 @@ void modCom()
   { 
     edMemoTextbox(memoBuff); // To be changed for something better, but an easy solution for the time being
 
-    replaceMemo("COMPRA.DBT",memoBuff, blockNum);
+    if(blockNum)
+    {
+      replaceMemo("COMPRA.DBT",memoBuff, blockNum);
+    }
+    else if(isMemoEmpty(memoBuff) == 0)
+    {
+      blockNum = addMemo("COMPRA.DBT",memoBuff);
+      char block[15] = {0};
+      snprintf(block, compra_descr[10].length + 1, "%*d", compra_descr[10].length, blockNum);
+      mvprintw(0,0, "BLOCK: x%sx", block);
+      replaceField(block, indice, compra_descr[10].fieldname, compra_ptr, compra_head, compra_descr);
+      getch();
+    }
 
     for(int i = 0; i < 6; i++)
     {
@@ -3035,19 +3682,94 @@ void modCom()
 
 void consCli()
 {
-  InputField entrada[1];
-  int entradas = 1;
+  FILE* cliPtr = NULL;
+  header cliHead[1];
+  descriptor cliDescr[20]; // Stock.dbf has less than 10 descriptors
+  InputField entrada[2];
+  int entradas = 2;
   int nOfDescr = 18;
+	const int x = 19;
+	const int y = 4;
+  int indice;
   
-  draw_background_submenu(6, 4, FIELD_NAME + CLI_MAX_LENGTH + 2, nOfDescr + 2);
-  recuadro(6, 4, FIELD_NAME + CLI_MAX_LENGTH + 2, nOfDescr + 2);
+  cliPtr = fopen("CLIPRO.DBF", "rb");
+  if(cliPtr == NULL)
+  {
+    mvprintw(0,0, "No se pudo abrir CLIPRO.DBF");
+    getch();
+    return;
+  }
+
+  store_header_data(cliHead, cliPtr, 0);
+  store_descriptor_data(cliDescr, cliPtr);
+
+  //Setting up the pseudoindexes (a fast one while i crack the DBase one)
+
+  size_t codiIndex[2500];
+  size_t razonIndex[2500];
+  size_t* currIndex = NULL;
+  int currBuff = -1;
   
-  init_input_field(&entrada[0], "CODIGO: ", 4, false, 10, 5, STRING);
+  retrieveIndex(cliHead, "CLIPRO_CODI.INDEX", codiIndex);
+  retrieveIndex(cliHead, "CLIPRO_RAZON.INDEX", razonIndex);
+
+  draw_background_submenu(x, y, FIELD_NAME + CLI_MAX_LENGTH + 2, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + CLI_MAX_LENGTH + 2, nOfDescr + 2);
+  
+  init_input_field(&entrada[0], "CODIGO: ", 4, false, x + 4, y + 1, STRING);
+  init_input_field(&entrada[1], "RAZON: ", 30, false, x+5, y+2, CAP);
   input_fields_loop(entrada, entradas, NULL);
 
-  pRecord("CLIPRO.dbf", entrada[0].input_buffer, 10, 5);
+  if(entrada[0].input_buffer[0] && !entrada[1].input_buffer[0]) 
+  {
+    rightAlign(entrada[0].input_buffer, cliDescr[0].length);
+    currIndex = codiIndex;
+    currBuff = 0;
+  }
+  else if(entrada[1].input_buffer[0])
+  {
+    currIndex = razonIndex;
+    currBuff = 1;
+  }
 
+  if(currIndex == NULL)
+  {
+    //this should be unreachable but just in case of failure I have this
+    pRecord("CLIPRO.dbf", entrada[0].input_buffer, x+4, y+1);
+  }
+  else
+  {
+    indice = get_incomplete_index(cliDescr[currBuff].fieldname, entrada[currBuff].input_buffer, cliPtr, cliHead, cliDescr);
+    if(indice ==  -1)
+    {
+      mvprintw(0, 0, "Registro no encontrado, error: %d ", indice);
+      getch();
+      return;
+    }
+    //find the index in the pseudo index made by me
+    for(int i = 0; i < cliHead->nofrecords; i++)
+    {
+      if(currIndex[i] == indice) 
+      {
+        indice = i;
+        break;
+      }
+    }
+    while(indice >= 0)
+    {
+      pRecordNew("CLIPRO.DBF", currIndex[indice], x+4, y+1);
+      indice = keyControlsHandler(indice);
+    }
+  }
+
+  if(fclose(cliPtr) != 0)
+  {
+    mvprintw(0,0, "error al cerrar el archivo");
+    getch();
+    return;
+  }
   free(entrada[0].prompt);
+  free(entrada[1].prompt);
   menu_principal();
 
   return;
@@ -3056,50 +3778,205 @@ void consCli()
 void agregarCli()
 {
   int nOfDescr = 18;
+	const int x = 19;
+	const int y = 1;
   
-  draw_background_submenu(6, 1, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
-  recuadro(6, 1, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
+  draw_background_submenu(x, y, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
   /*
   I'm too lazy to make an automatic type recognition so i declared it here manually mostly because dbf 
   numbers are declared as N so no actual distinction between floats and ints, you can only infer it from
   looking at the decimal places in the descriptor
   */
   int types[] = {INTEGER, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, FLOAT, DATE, FLOAT, FLOAT, FLOAT, FLOAT};
-  agregarReg("CLIPRO.dbf", types, 13, 2);
+  agregarReg("CLIPRO.dbf", types, x + 4, y + 1);
   menu_principal();
-  
+  system("indexer CLIPRO.DBF CLIPRO_CODI.INDEX 1 4");
+  system("indexer CLIPRO.DBF CLIPRO_RAZON.INDEX 5 30");
   return;
 }
 
 void modCli()
 {
   int nOfDescr = 18;
+	const int x = 19;
+	const int y = 1;
   
-  draw_background_submenu(6, 1, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
-  recuadro(6, 1, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
+  draw_background_submenu(x, y, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
   
   int types[] = {INTEGER, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, FLOAT, DATE, FLOAT, FLOAT, FLOAT, FLOAT};
-  modReg("CLIPRO.dbf", types, 13, 2);
+  modReg("CLIPRO.dbf", types, x + 4, y + 1);
+  menu_principal();
+  system("indexer CLIPRO.DBF CLIPRO_CODI.INDEX 1 4");
+  system("indexer CLIPRO.DBF CLIPRO_RAZON.INDEX 5 30");
+  return;
+}
+
+void deudores()
+{
+  FILE *cliPtr = NULL;
+  header cliHead[1];
+  descriptor cliDescr[20];
+  int nOfInd;
+  int newNOfInd = 0;
+  int saldoOffset = 0;
+  int k = 0;
+  int check;
+  int index[255];
+  size_t offsets[3] = {5, 20, 0};
+  SearchFields fields[] = 
+  {
+    {"NUMERO", 0}, {"RAZON", 0}, {"ACREEDOR", 0}, {"DEUDOR", 0}
+  }; 
+  
+  cliPtr = fopen("CLIPRO.dbf", "rb");
+  if(cliPtr == NULL)
+  {
+    mvprintw(0,0, "No se pudo abrir CLIPRO.dbf");
+    getch();
+    return;
+  } 
+  store_header_data(cliHead, cliPtr, 0);
+  store_descriptor_data(cliDescr, cliPtr);
+  
+  char* buffer = (char*)malloc(cliHead[0].record_bytes * 255);
+  
+  //Pasos a seguir
+  //Extraer ACREEDOR y DEUDOR != 0 
+  offsets[2] = cliHead[0].record_bytes;
+  saldoOffset += cliDescr[0].length + 1 + cliDescr[1].length + 1 + cliDescr[16].length + 1 + cliDescr[17].length + 1;
+  
+  nOfInd = extDeudores("CLIPRO.dbf", buffer, fields);
+  for(int i = 0; i < 254; i++) 
+  {
+    index[i] = i; 
+  }
+
+  while(k < nOfInd)
+  {
+    check = strncmp("         0.00", &buffer[k * offsets[2] + saldoOffset], cliDescr[17].length);
+    if(!check)
+    {
+     //mvprintw(0, 0, "%s\nEliminado", &buffer[k * offsets[2]]); getch();
+      k++; //Necesito Eliminar los valores que tengan 0 en el saldo
+      //CHECKSTACKX(index, 100);
+      //printw("%s",&buffer[k * offsets[2] + saldoOffset]);
+    }
+    else
+    {
+      //mvprintw(0, 0, "%s\nValido", &buffer[k * offsets[2]]); getch();
+      index[newNOfInd] = index[k];
+      newNOfInd++;
+      k++;
+    }
+  }
+  bSortStr(buffer, index, newNOfInd, offsets);
+  mvprintw(0, 0, "%s %30.5s %12.8s %12.5s %13.5s", "CODI", "RAZON" , "ACREEDOR", "DEUDOR", "SALDO");
+  
+  vScroller2(buffer, 0, 2, 28, newNOfInd, index, cliHead);
+  
+  if(fclose(cliPtr) != 0)
+  {
+    mvprintw(0,0, "error al cerrar el archivo");
+    getch();
+    return;
+  }
+  free(buffer);
+  menu_principal();
   return;
 }
 
 //Stock
 
+
 void sto_consulta()
 {
-  InputField entrada[1];
-  int entradas = 1;
+  FILE* stoPtr = NULL;
+  header stoHead[1];
+  descriptor stoDescr[10]; // Stock.dbf has less than 10 descriptors
+  InputField entrada[2];
+  int entradas = 2;
   int nOfDescr = 8;
+	const int x = 6;
+	const int y = 9;
+  int indice;
   
-  draw_background_submenu(6, 4, FIELD_NAME + STOCK_MAX_LENGTH + 2, nOfDescr + 2);
-  recuadro(6, 4, FIELD_NAME + STOCK_MAX_LENGTH + 2, nOfDescr + 2);
+  stoPtr = fopen("STOCK1.dbf", "rb");
+  if(stoPtr == NULL)
+  {
+    mvprintw(0,0, "No se pudo abrir STOCK1.dbf");
+    getch();
+    return;
+  }
+
+  store_header_data(stoHead, stoPtr, 0);
+  store_descriptor_data(stoDescr, stoPtr);
+
+  //Setting up the pseudoindexes (a fast one while i crack the DBase one)
+  size_t codiIndex[2500];
+  size_t prodIndex[2500];
+  size_t* currIndex = NULL;
+  int currBuff = -1;
+ 
+  retrieveIndex(stoHead, "STOCK1_CODI.INDEX", codiIndex);
+  retrieveIndex(stoHead, "STOCK1_PROD.INDEX", prodIndex);
+
+  draw_background_submenu(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 2, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 2, nOfDescr + 2);
     
-  init_input_field(&entrada[0], "CODIGO: ", 4, false, 10, 5, STRING);
+  init_input_field(&entrada[0], "CODIGO: ", 4, false, x+4, y+1, STRING);
+  init_input_field(&entrada[1], "NOMBRE: ", 30, false, x+4, y+2, CAP);
   input_fields_loop(entrada, entradas, NULL);
 
-  pRecord("STOCK1.DBF", entrada[0].input_buffer, 10, 5);
-
+  if(entrada[0].input_buffer[0] && !entrada[1].input_buffer[0]) 
+  {
+    currIndex = codiIndex;
+    currBuff = 0;
+  }
+  else if(entrada[1].input_buffer[0])
+  {
+    currIndex = prodIndex;
+    currBuff = 1;
+  }
+  
+  if(currIndex == NULL)
+  {
+    //this should be unreachable but just in case of failure I have this
+    pRecord("STOCK1.DBF", entrada[0].input_buffer, x+4, y+1);
+  }
+  else
+  {
+    indice = get_incomplete_index(stoDescr[currBuff].fieldname, entrada[currBuff].input_buffer, stoPtr, stoHead, stoDescr);
+    if(indice ==  -1)
+    {
+      mvprintw(0, 0, "Registro no encontrado, error: %d ", indice);
+      getch();
+      return;
+    }
+    //find the index in the pseudo index made by me
+    for(int i = 0; i < stoHead->nofrecords; i++)
+    {
+      if(currIndex[i] == indice) 
+      {
+        indice = i;
+        break;
+      }
+    }
+    while(indice >= 0)
+    {
+      pRecordNew("STOCK1.DBF", currIndex[indice], x+4, y+1);
+      indice = keyControlsHandler(indice);
+    }
+  }
+  if(fclose(stoPtr) != 0)
+  {
+    mvprintw(0,0, "error al cerrar el archivo");
+    getch();
+    return;
+  }
   free(entrada[0].prompt);
+  free(entrada[1].prompt);
   menu_principal();
 
   return;
@@ -3108,12 +3985,14 @@ void sto_consulta()
 void modStock()
 {
   int nOfDescr = 8;  
+	const int x = 6;
+	const int y = 8;
   
-  draw_background_submenu(6, 4, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
-  recuadro(6, 4, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
+  draw_background_submenu(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
   
   int types[] = {CAP, CAP, STRING, STRING, INTEGER, INTEGER, FLOAT, STRING};
-  modReg("STOCK1.dbf", types, 13, 5);
+  modReg("STOCK1.dbf", types, x + 7, y + 1);
   menu_principal();
   
   return;
@@ -3122,35 +4001,42 @@ void modStock()
 void agregarStock()
 {
   int nOfDescr = 8;
+	const int x = 6;
+	const int y = 6;
   
-  draw_background_submenu(6, 4, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
-  recuadro(6, 4, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
+  draw_background_submenu(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
   
   int types[] = {CAP, CAP, STRING, STRING, INTEGER, INTEGER, FLOAT, STRING};
-  agregarReg("STOCK1.dbf", types, 13, 5);
+  agregarReg("STOCK1.dbf", types, x + 7, y + 1);
   menu_principal();
   
   return;
 }
 
-void grupoPorProv()
+
+static void grupoStockPorCriterio(int fieldIndex)
 {
+  clear();
   FILE *stoPtr = NULL;
   header stoHead[1];
   descriptor stoDescr[10]; // Stock.dbf has less than 10 descriptors
-  InputField prov[1];
+  InputField entrada[1];
   int nOfInd;
   int entradas = 1;
   int choice = printingMenu();
-  char *campos[] = {"CODIGO", "NOMBRE", "ENVASE", "PRECIOB"};
-  int index[200];
-  for(int i = 0; i < 200; i++)
+  const int allocSize = 200; // Adjust if needed
+  int index[allocSize];
+  for(int i = 0; i < allocSize; i++)
   {
     index[i] = i;
   }
   
-  if(choice == 3) return;
-  
+  if(choice == 3) 
+  {
+    menu_principal();
+    return;
+  }
   stoPtr = fopen("STOCK1.dbf", "rb");
   if(stoPtr == NULL)
   {
@@ -3162,12 +4048,59 @@ void grupoPorProv()
   store_header_data(stoHead, stoPtr, 0);
   store_descriptor_data(stoDescr, stoPtr);
   
-  char *buffer = (char*)malloc(stoHead->record_bytes*200 * sizeof(char));
-
-  init_input_field(&prov[0], "PROVEEDOR: ", stoDescr[3].length, false, 20, 20, STRING);
-  input_fields_loop(prov, entradas, NULL);
+  char *buffer = (char*)malloc(stoHead->record_bytes*allocSize * sizeof(char));
+  if(stoDescr[fieldIndex].type == 'C')
+  {
+    init_input_field(&entrada[0], stoDescr[fieldIndex].fieldname, stoDescr[fieldIndex].length, false, 20, 20, CAP);
+  }
+  else if(stoDescr[fieldIndex].type == 'N')
+  {
+    init_input_field(&entrada[0], stoDescr[fieldIndex].fieldname, stoDescr[fieldIndex].length, false, 20, 20, FLOAT);
+  }
+  memset(entrada[0].input_buffer, 0, 99);
+  input_fields_loop(entrada, entradas, NULL);
+  if(entrada[0].input_buffer[0] == 0) return;
+	
+  SearchFields campos[] = 
+  {
+    {"CODIGO", 0},
+    {"NOMBRE", 0},
+    {"ENVASE", 0},
+    {"PRECIOB", 0}
+  };
   
-  nOfInd = extCoinFields("STOCK1.dbf", campos, 4, buffer, prov[0].input_buffer, stoDescr[3].fieldname);
+
+	SearchConfig config[1] = 
+	{
+    INIT_SEARCH_CONFIG(
+								        .fName = "STOCK1.dbf",
+												.nOfFields = 4,
+												.fields = campos,
+												.fieldName = stoDescr[fieldIndex].fieldname,
+												.extraSpace = 0
+										  )
+	};
+  
+  if(stoDescr[fieldIndex].type == 'N')
+  {
+    addDecimals(entrada[0].input_buffer, stoDescr[fieldIndex].length, stoDescr[fieldIndex].decimal);
+    rightAlign(entrada[0].input_buffer, stoDescr[fieldIndex].length);
+  }
+  if(fieldIndex == 1)
+  {
+    int len = strnlen(entrada[0].input_buffer, stoDescr[fieldIndex].length);
+    char start[31] = {0};
+    char end[31] = {0};
+    memcpy(start, entrada[0].input_buffer, 30);
+    memcpy(end, entrada[0].input_buffer, 30);
+    start[len] = 0;
+    end [len] = 127;
+    nOfInd = extBetwFields(config, buffer, start, end);
+  }
+  else
+  {
+	  nOfInd = extCoinFields(config, buffer, entrada[0].input_buffer);
+  }
 
   if(fclose(stoPtr) != 0)
   {
@@ -3176,7 +4109,6 @@ void grupoPorProv()
     getch();
     return;
   }
-
   switch(choice)
   {
     case 1:
@@ -3186,10 +4118,27 @@ void grupoPorProv()
       flushToFile(buffer, strlen(buffer), nOfInd);
       break;
   }
-  
   free(buffer);
-  
+  return;
+}
 
+void grupoPorPrecio()
+{
+  grupoStockPorCriterio(6);
+  menu_principal();
+  return;
+}
+
+void grupoPorNombre()
+{
+  grupoStockPorCriterio(1);
+  menu_principal();
+  return;
+}
+
+void grupoPorProv()
+{
+  grupoStockPorCriterio(3);
   menu_principal();
   return;
 }
@@ -3203,29 +4152,105 @@ void modPro()
   recuadro(6, 4, FIELD_NAME + PRO_MAX_LENGTH + 2, nOfDescr + 2);
   
   int types[] = {INTEGER, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, FLOAT, FLOAT};
-  modReg("PROVE.dbf", types, 13, 2);
-  menu_principal();
+  modReg("PROVE.dbf", types, 13, 5);
+	menprov();
   
+  system("indexer PROVE.DBF PROVE_CODI.INDEX 1 4");
+  system("indexer PROVE.DBF PROVE_RAZON.INDEX 5 30");
   return;
 }
 
 void consPro()
 {
-  InputField entrada[1];
-  int entradas = 1;
+  FILE* proPtr = NULL;
+  header proHead[1];
+  descriptor proDescr[20]; // Stock.dbf has less than 10 descriptors
+  InputField entrada[2];
+  int entradas = 2;
   int nOfDescr = 14;
+	const int x = 6;
+	const int y = 4;
+  int indice;
   
-  draw_background_submenu(6, 4, FIELD_NAME + PRO_MAX_LENGTH + 2, nOfDescr + 2);
-  recuadro(6, 4, FIELD_NAME + PRO_MAX_LENGTH + 2, nOfDescr + 2);
+  proPtr = fopen("PROVE.DBF", "rb");
+  if(proPtr == NULL)
+  {
+    mvprintw(0,0, "No se pudo abrir PROVE.DBF");
+    getch();
+    return;
+  }
+
+  store_header_data(proHead, proPtr, 0);
+  store_descriptor_data(proDescr, proPtr);
+
+  //Setting up the pseudoindexes (a fast one while i crack the DBase one)
+
+  size_t codiIndex[2500];
+  size_t razonIndex[2500];
+  size_t* currIndex = NULL;
+  int currBuff = -1;
+  
+  retrieveIndex(proHead, "PROVE_CODI.INDEX", codiIndex);
+  retrieveIndex(proHead, "PROVE_RAZON.INDEX", razonIndex);
+  
+  draw_background_submenu(x, y, FIELD_NAME + PRO_MAX_LENGTH + 2, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + PRO_MAX_LENGTH + 2, nOfDescr + 2);
     
-  init_input_field(&entrada[0], "CODIGO: ", 4, false, 10, 5, STRING);
+  init_input_field(&entrada[0], "CODIGO: ", 4, false, x+4, y+1, STRING);
+  init_input_field(&entrada[1], "RAZON: ", 30, false, x+5, y+2, CAP);
   input_fields_loop(entrada, entradas, NULL);
 
-  pRecord("PROVE.dbf", entrada[0].input_buffer, 10, 5);
+  if(entrada[0].input_buffer[0] && !entrada[1].input_buffer[0]) 
+  {
+    rightAlign(entrada[0].input_buffer, proDescr[0].length);
+    currIndex = codiIndex;
+    currBuff = 0;
+  }
+  else if(entrada[1].input_buffer[0])
+  {
+    currIndex = razonIndex;
+    currBuff = 1;
+  }
 
+  if(entrada[1].input_buffer[0] == 0)
+  {
+    pRecord("PROVE.dbf", entrada[0].input_buffer, x+4, y+1);
+  }
+  else
+  {
+    indice = get_incomplete_index(proDescr[currBuff].fieldname, entrada[currBuff].input_buffer, proPtr, proHead, proDescr);
+    if(indice ==  -1)
+    {
+      mvprintw(0, 0, "Registro no encontrado, error: %d ", indice);
+      getch();
+      return;
+    }
+    //find the index in the pseudo index made by me
+    for(int i = 0; i < proHead->nofrecords; i++)
+    {
+      if(currIndex[i] == indice) 
+      {
+        indice = i;
+        break;
+      }
+    }
+    while(indice >= 0)
+    {
+      pRecordNew("PROVE.DBF", currIndex[indice], x+4, y+1);
+      indice = keyControlsHandler(indice);
+    }
+  }
+
+  if(fclose(proPtr) != 0)
+  {
+    mvprintw(0,0, "error al cerrar el archivo");
+    getch();
+    return;
+  }
   free(entrada[0].prompt);
-  menu_principal();
+  free(entrada[1].prompt);
 
+	menprov();
   return;
 }
 
@@ -3238,11 +4263,85 @@ void agregarPro()
   
   int types[] = {INTEGER, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, FLOAT, FLOAT};
   agregarReg("PROVE.dbf", types, 13, 2);
-  menu_principal();
+	menprov();
   
   return;
 }
 
+void acreedores()
+{
+  FILE *proPtr = NULL;
+  header proHead[1];
+  descriptor proDescr[20];
+  int nOfInd;
+  int newNOfInd = 0;
+  int saldoOffset = 0;
+  int k = 0;
+  int check;
+  int index[255];
+  size_t offsets[3] = {5, 20, 0};
+  SearchFields fields[] = 
+  {
+    {"NUMERO", 0}, {"RAZON", 0}, {"SGACRE", 0}, {"SGDEUD", 0}
+  }; 
+  
+  proPtr = fopen("PROVE.DBF", "rb");
+  if(proPtr == NULL)
+  {
+    mvprintw(0,0, "No se pudo abrir PROVE.DBF");
+    getch();
+    return;
+  } 
+  store_header_data(proHead, proPtr, 0);
+  store_descriptor_data(proDescr, proPtr);
+  
+  char* buffer = (char*)malloc(proHead[0].record_bytes * 255);
+  
+  //Pasos a seguir
+  //Extraer ACREEDOR y DEUDOR != 0 
+  offsets[2] = proHead[0].record_bytes;
+  saldoOffset += proDescr[0].length + 1 + proDescr[1].length + 1 + proDescr[12].length + 1 + proDescr[13].length + 1;
+  
+  nOfInd = extDeudores("PROVE.DBF", buffer, fields);
+
+  for(int i = 0; i < 254; i++) 
+  {
+    index[i] = i; 
+  }
+
+  char zero[16] = "0.00";
+  rightAlign(zero, proDescr[12].length + 1);
+  while(k < nOfInd)
+  {
+    check = strncmp(zero, &buffer[k * offsets[2] + saldoOffset], proDescr[12].length);
+    if(!check)
+    {
+      k++; //Necesito Eliminar los valores que tengan 0 en el saldo
+      //CHECKSTACKX(index, 100);
+      //printw("%s",&buffer[k * offsets[2] + saldoOffset]);
+    }
+    else
+    {
+      index[newNOfInd] = index[k];
+      newNOfInd++;
+      k++;
+    }
+  }
+  bSortStr(buffer, index, newNOfInd, offsets);
+  mvprintw(0, 0, "%s %30.5s %10.8s %10.5s %12.5s", "CODI", "RAZON" , "ACREEDOR", "DEUDOR", "SALDO");
+  
+  vScroller2(buffer, 0, 2, 28, newNOfInd, index, proHead);
+  
+  if (fclose(proPtr) != 0) 
+  {
+    mvprintw(0, 0, "Error al cerrar el archivo: %s", strerror(errno));
+    getch();
+    return;
+  }
+  free(buffer);
+  menprov();
+  return;
+}
 //Cheques
 void agregarCheque()
 {
@@ -3255,6 +4354,10 @@ void agregarCheque()
   agregarReg("CHE_TERC.dbf", types, 13, 5);
   menu_principal();
   
+  system("indexer CHE_TERC.DBF CHE_TERC_CODI.INDEX 1 5");
+  system("indexer CHE_TERC.DBF CHE_TERC_TITU.INDEX 41 20");
+  system("indexer CHE_TERC.DBF CHE_TERC_ENDO.INDEX 61 20");
+  system("indexer CHE_TERC.DBF CHE_TERC_IMPO.INDEX 81 10");
   return;
 }
 
@@ -3269,25 +4372,125 @@ void modCheque()
   modReg("CHE_TERC.dbf", types, 13, 5);
   menu_principal();
   
+  system("indexer CHE_TERC.DBF CHE_TERC_CODI.INDEX 1 5");
+  system("indexer CHE_TERC.DBF CHE_TERC_TITU.INDEX 41 20");
+  system("indexer CHE_TERC.DBF CHE_TERC_ENDO.INDEX 61 20");
+  system("indexer CHE_TERC.DBF CHE_TERC_IMPO.INDEX 81 10");
   return;
   
 }
 
 void consCheque()
 {
-  InputField entrada[1];
-  int entradas = 1;
-  int nOfDescr = 10;
+  FILE* chePtr = NULL;
+  header cheHead[1];
+  descriptor cheDescr[12]; // CHE_TERC.DBF has 10 descriptors
+  InputField entrada[4];
+  int entradas = 4;
+	const int x = 6;
+	const int y = 4;
+  int indice;
   
-  draw_background_submenu(6, 4, FIELD_NAME + CHEC_MAX_LENGTH + 2, nOfDescr + 2);
-  recuadro(6, 4, FIELD_NAME + CHEC_MAX_LENGTH + 2, nOfDescr + 2);
+  chePtr = fopen("CHE_TERC.DBF", "rb");
+  if(chePtr == NULL)
+  {
+    mvprintw(0,0, "No se pudo abrir CHE_TERC.DBF");
+    getch();
+    return;
+  }
+
+  size_t nOfDescr = store_header_data(cheHead, chePtr, 0);
+  store_descriptor_data(cheDescr, chePtr);
+
+  //Setting up the pseudoindexes (a fast one while i crack the DBase one)
+
+  size_t codiIndex[200];
+  size_t tituIndex[200];
+  size_t endoIndex[200];
+  size_t impoIndex[200];
+  size_t* currIndex = NULL;
+  int currBuff = -1;
+  int currDescr = -1;
+  
+  retrieveIndex(cheHead, "CHE_TERC_CODI.INDEX", codiIndex);
+  retrieveIndex(cheHead, "CHE_TERC_TITU.INDEX", tituIndex);
+  retrieveIndex(cheHead, "CHE_TERC_ENDO.INDEX", endoIndex);
+  retrieveIndex(cheHead, "CHE_TERC_IMPO.INDEX", impoIndex);
+  
+  draw_background_submenu(x, y, FIELD_NAME + CHEC_MAX_LENGTH + 2, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + CHEC_MAX_LENGTH + 2, nOfDescr + 2);
     
-  init_input_field(&entrada[0], "NUMERO: ", 4, false, 10, 5, STRING);
+  init_input_field(&entrada[0], "NUMERO: ", cheDescr[0].length, false, x + 4, y + 1, STRING);
+  init_input_field(&entrada[1], "TITULAR: ", cheDescr[5].length, false, x + 3, y + 6, CAP);
+  init_input_field(&entrada[2], "ENDOSATE: ", cheDescr[6].length, false, x + 2, y + 7, CAP);
+  init_input_field(&entrada[3], "IMPORTE: ", cheDescr[7].length, false, x + 3, y + 8, FLOAT);
   input_fields_loop(entrada, entradas, NULL);
 
-  pRecord("CHE_TERC.dbf", entrada[0].input_buffer, 10, 5);
+  if(entrada[0].input_buffer[0]) 
+  {
+    currIndex = codiIndex;
+    currBuff = 0;
+    currDescr = 0;
+  }
+  else if(entrada[1].input_buffer[0])
+  {
+    currIndex = tituIndex;
+    currBuff = 1;
+    currDescr = 5;
+  }
+  else if(entrada[2].input_buffer[0])
+  {
+    currIndex = endoIndex;
+    currBuff = 2;
+    currDescr = 6;
+  }
+  else if(entrada[3].input_buffer[0])
+  {
+    addDecimals(entrada[3].input_buffer, cheDescr[7].length, cheDescr[7].decimal);
+    rightAlign(entrada[3].input_buffer, cheDescr[7].length);
+    currIndex = impoIndex;
+    currBuff = 3;
+    currDescr = 7;
+  }
 
+  if(currIndex == NULL)
+  {
+    //this should be unreachable but just in case of failure I have this
+    pRecord("CHE_TERC.DBF", entrada[0].input_buffer, x + 4, y + 1);
+  }
+  else
+  {
+    indice = get_incomplete_index(cheDescr[currDescr].fieldname, entrada[currBuff].input_buffer, chePtr, cheHead, cheDescr);
+    if(indice ==  -1)
+    {
+      mvprintw(0, 0, "Registro no encontrado, error: %d ", indice);
+      getch();
+      return;
+    }
+    //find the index in the pseudo index made by me
+    for(int i = 0; i < cheHead->nofrecords; i++)
+    {
+      if(currIndex[i] == indice) 
+      {
+        indice = i;
+        break;
+      }
+    }
+    while(indice >= 0 && indice < cheHead->nofrecords)
+    {
+      pRecordNew("CHE_TERC.DBF", currIndex[indice], x+4, y+1);
+      indice = keyControlsHandler(indice);
+    }
+  }
+
+  if(fclose(chePtr) != 0)
+  {
+    mvprintw(0,0, "error al cerrar el archivo");
+    getch();
+    return;
+  }
   free(entrada[0].prompt);
+  free(entrada[1].prompt);
   menu_principal();
 
   return;
@@ -3314,11 +4517,29 @@ void chequesNoEntregados()
   }
   store_header_data(ch_head, fPtr, 0);
   store_descriptor_data(ch_descr, fPtr);
-  char *campos[] = {"NUMERO", "FECHA_COB", "TITULAR", "ENDOSANTE", "IMPORTE"};
+  SearchFields campos[] = 
+  {
+    {"NUMERO", 0}, 
+    {"FECHA_COB", YEAR_ON}, 
+    {"TITULAR", 0}, 
+    {"ENDOSANTE", 0}, 
+    {"IMPORTE", 0}};
   
+  
+  SearchConfig config[1] = 
+	{
+    INIT_SEARCH_CONFIG(
+                        .fName = "CHE_TERC.dbf", 
+												.nOfFields = 5, 
+												.fields = campos, 
+												.fieldName = "FECHA_ENT", 
+												.extraSpace = 0
+		                  )
+	};
+ 
   char *testBuffer = (char*)malloc(ch_head->record_bytes*200 * sizeof(char));
   
-  nOfInd = extCoinFields("CHE_TERC.dbf", campos, 5, testBuffer, "        ", "FECHA_ENT");
+  nOfInd = extCoinFields(config, testBuffer, "        ");
   // Hasta ahora solo separa los cheques que no fueron entregados
   
   
@@ -3335,44 +4556,6 @@ void chequesNoEntregados()
   return;  
 }
 
-//helper function to extXXXXFileds it calculates the offsets of the beginning of each field
-static void calculateOffset(char** fields, const char* field, size_t* offsets, const descriptor* descr)
-{
-  int i = 0;
-  int j = 0;
-  size_t len1;
-  size_t cmpLen = 10;
-  
-  while(strncmp(field, descr[i].fieldname, cmpLen))
-  {
-    if(!strncmp(fields[j], descr[i].fieldname, cmpLen))
-    {
-      if(j > 0)
-      {
-        offsets[0] += (descr[i].length + 1);
-        if(descr[i].type == 'D') offsets[0] += 2;
-      }
-      j++;
-      i = 0;
-    }
-    else i++;
-    
-
-    len1 = strnlen(fields[j], 10);
-    cmpLen = len1 < 10 ? len1 : 10;
-  }
-  i = 0;
-  while(descr[i].fieldname[0] != TERMINATOR)
-  {
-    if(!strncmp(field, descr[i].fieldname, 10))
-    {
-      offsets[1] += descr[i].length;
-    }
-    if(descr[i].type == 'D') offsets[1] += 2;
-    i++;
-  }
-  return;
-}
 
 void funcTest()
 {
@@ -3387,20 +4570,42 @@ void funcTest()
     return;
   }
   int nOfInd;
-  int index[200];
+  int index[5000];
   char *lala[] = {"FECHA", "DENOMI", "DEUDO"};
-  store_header_data(head, fPtr, 0);
+  
+	SearchFields achtung[] = 
+  {
+    {"FECHA", YEAR_OFF},
+    {"DENOMI", 0},
+		{"ACREE", 0},
+    {"DEUDO", 0},
+  };
+  
+	size_t nOfDesc = store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
-  size_t fieldOff[2] = {0};
-  calculateOffset(lala, descr[1].fieldname, fieldOff, descr);
-  for(int i = 0; i < 200; i++)
+	
+	SearchConfig config[1] = 
+	{
+    INIT_SEARCH_CONFIG(
+					              .fName = "CTASCTES.dbf", 
+												.nOfFields = 4, 
+												.fields = achtung, 
+												.fieldName = "ACREE", 
+												.extraSpace = 12
+					            )
+	};
+
+  size_t fieldOff[3] = {0};
+  calculateOffset(achtung, descr[1].fieldname, fieldOff, descr);
+  for(int i = 0; i < head->nofrecords; i++)
   {
     index[i] = i;
   }
   
-  char *testBuffer = (char*)malloc(head->record_bytes*200 * sizeof(char));
+  char *testBuffer = (char*)malloc(head->record_bytes * head->nofrecords * sizeof(char));
+  memset(testBuffer, 0, head->record_bytes * head->nofrecords * sizeof(char));
   
-  nOfInd = extBetwFields("CTASCTES.dbf", lala, 3, testBuffer, "19250301", "19250310", "FECHA");
+  nOfInd = extBetwFields(config, testBuffer, "     1.00", "1000000.00");
   bSortStr(testBuffer, index, nOfInd, fieldOff);
 
   move(1, 0);
@@ -3418,19 +4623,27 @@ void funcTest()
     else printw(" %x ", lala[0][i]);
   }
   printw("%d", sizeof(lala));
-  mvprintw(0, 0, "%d              ", nOfInd);
+  mvprintw(0, 0, "%d       %u       ", nOfInd, nOfDesc);
   vScroller(testBuffer, 0, 2, 19, nOfInd, index);
   
-  nOfInd = extGrFields("CTASCTES.dbf", lala, 3, testBuffer, "2000", descr[3].fieldname);
-  for(int i = 0; i < 200; i++)
+  nOfInd = extGrFields(config, testBuffer, " 200000.00");
+  for(int i = 0; i < head->nofrecords; i++)
   {
     index[i] = i;
   }
   mvprintw(0, 0, "%d              ", nOfInd);
   vScroller(testBuffer, 0, 2, 19, nOfInd, index);
 
-  nOfInd = extLowFields("CTASCTES.dbf", lala, 3, testBuffer, "50", descr[3].fieldname);
-  for(int i = 0; i < 200; i++)
+  nOfInd = extLowFields(config, testBuffer, "  10000.00");
+  for(int i = 0; i < head->nofrecords; i++)
+  {
+    index[i] = i;
+  }
+  mvprintw(0, 0, "%d              ", nOfInd);
+  vScroller(testBuffer, 0, 2, 19, nOfInd, index);
+  
+  nOfInd = extNeqFields(config, testBuffer, "      0.00");
+  for(int i = 0; i < head->nofrecords; i++)
   {
     index[i] = i;
   }
