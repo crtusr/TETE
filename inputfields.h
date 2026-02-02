@@ -32,6 +32,6 @@ void handle_input_char(InputField* field, int ch, bool ins);
 void handle_backspace(InputField* field);
 void handle_cursor_left(InputField* field);
 void handle_cursor_right(InputField* field);
-void input_fields_loop(InputField fields[], int num_fields, void (*background)(void)); // Function to handle input loop for fields
+int input_fields_loop(InputField fields[], int num_fields, void (*background)(void)); // Function to handle input loop for fields
 
 #endif
