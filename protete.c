@@ -11,12 +11,14 @@
 #include "inputfields.h"
 #include "dbftool.h"
 //#include "debug.h"
-//macros for dbf fields of ctasctes.dbf used for clarity
 
 //                                *****Formatting functions*****
 static void dateRectifier(char* date)
 {
-  char rightDate[11]; //NEEDS NULL TERMINATOR YOU IDIOT
+  /*
+   *  the date is 8 char + 2 separators + null terminator added by snprintf;
+   * */
+  char rightDate[11]; 
   snprintf(rightDate, 11, "%c%c-%c%c-%c%c%c%c", date[6], date[7], date[4], date[5], date[0], date[1], date[2] , date[3]);
   memcpy(date, rightDate, 10);
   return;
@@ -151,6 +153,8 @@ int isMemoEmpty(char* buffer)
 //                                *****Helper functions*****
 
 
+//Unused functions commented out to silence the compiler errors
+
 /*
 //set intersection between two index list
 static int indexIntersection(int* index1, int nOfInd1, int* index2, int nOfInd2, int* filtered)
@@ -236,6 +240,7 @@ static int retrieveIndex(header* head, const char* fName, size_t* index)
   }
   return 0;
 }
+
 static int keyControlsHandler(int indice)
 {
   int ch = 0;
@@ -351,6 +356,8 @@ static void zeroFill(char* sto)
 
   fclose(iFPtr);
 */
+
+//new function For calculating the balance for clients and suppliers
 static void pRecordNew(const char* arch, const size_t recIndex, const int xPos, const int yPos)
 {
   // declaracion de variables
@@ -363,7 +370,7 @@ static void pRecordNew(const char* arch, const size_t recIndex, const int xPos, 
   int clipro = !strncmp(arch, "CLIPRO.DBF", 7);
   int prove = !strncmp(arch, "PROVE.DBF", 6);
   
-  // Abro el archivo y extraigo el encabezado
+  // Open the file and extract the header and file descriptors
   
   fPtr = fopen(arch, "rb");
   if (fPtr == NULL) 
@@ -1001,7 +1008,6 @@ static int extNeqFields(const SearchConfig* config, char* buffer, const char* to
           off++;
         }
         get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
-        //on -O3 it is not working correctly
 
         if(fieldType[j] == 'D')
         {
@@ -1186,7 +1192,6 @@ static int extLowFields(const SearchConfig* config, char* buffer, const char* to
           off++;
         }
         get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
-        //on -O3 it is not working correctly
 
         if(fieldType[j] == 'D')
         {
@@ -1281,7 +1286,6 @@ static int extBetwFields(const SearchConfig* config , char* buffer, const char* 
           off++;
         }
         get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
-        //on -O3 it is not working correctly
 
         if(fieldType[j] == 'D')
         {
@@ -1320,7 +1324,7 @@ static int extBetwFields(const SearchConfig* config , char* buffer, const char* 
   return nOfIndexes;
 }
 
-//El Proposito de esta funcion es pasarle un buffer, los campos y que me haga el scroller 
+//The purpose of this function is to display a text buffer with vertical scrolling
 static void vScroller(char* buffer,
                       int startX, 
                       int startY,
@@ -1440,12 +1444,13 @@ static void vScroller2(char* buffer,
 /*
 Esta funcion es para todas las opciones de salida por IMPRESORA 
 que se reimplementó para que lo guarde en un archivo de texto
+
+This function is for every option that has an output via PRINTER,
+it was reimplemented to save it as a .txt file as the original 
+program did
 */
 static void flushToFile(const char* buffer, const size_t lineLength, const size_t nOfIndexes)
 {
-  
-  //strictly speaking you would want to call this function like i.e. 
-  //flushToFile("STOCK1.dbf", {"CODIGO", "NOMBRE" ... etc})
   
   FILE *texto = NULL;
   
@@ -1859,7 +1864,15 @@ void opsCliPorImpresora()
 
 void ultimas_op_cli()
 {
+  
+  /*
+   *  indexAlloc is the amount of records that are going to get allocated so 
+   *  for this use case I know there will not be more than 1 operation 
+   *  per client per day meaning no more than 365 operations per year 
+   * */
   const int indexAlloc = 500;
+
+
   header ctasHead[1];
   descriptor ctasDescr[MAX_DBF_FIELDS];
   InputField entrada[1];
@@ -1887,7 +1900,7 @@ void ultimas_op_cli()
 
   rightAlign(entrada[0].input_buffer, ctasDescr[3].length);
 
-  char *dbfData = (char *)malloc((ctasHead[0].record_bytes) * indexAlloc); // basically assuming no more than 500 records for 1 client 
+  char *dbfData = malloc((ctasHead[0].record_bytes) * indexAlloc); // basically assuming no more than 500 records for 1 client 
   
   SearchFields campos[] = 
   {
@@ -1952,6 +1965,8 @@ void ultimas_op_cli()
   free(dbfData);
   return;
 }
+//this was the old version of the function
+
 /*
 void ultimas_op_cli()
 {
@@ -2318,10 +2333,10 @@ void agregarCtacte()
 
   FILE *ctasctes_ptr = NULL;
   header ctasctes_head[1];
-  descriptor ctasctes_descr[15]; // I chose 15 because i Know the file I will be opening has less than 15 fields,
+  descriptor ctasctes_descr[15]; // I chose 15 because i Know the file I will be opening has less than 15 fields
   FILE *cli_ptr = NULL;
   header cli_head[1];
-  descriptor cli_descr[20]; // MAKE SURE YOU DECLARE MORE DESCRIPTORS THAN WHAT'S ON THE DBF FILE, IF YOU DON'T, IT WILL BE THE END OF THE WORLD
+  descriptor cli_descr[20]; 
   
   //variables and structs related to CTASCTES.dbf
   
@@ -2396,11 +2411,11 @@ void agregarCtacte()
     snprintf(cabecera[1].input_buffer, 9, "%02d%02d%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 
     cabecera[1].count = ctasctes_descr[1].length;
-    cabecera[1].cursor_pos = cabecera[1].count;
+    //cabecera[1].cursor_pos = cabecera[1].count;
 
     memcpy(cabecera[0].input_buffer, lastOp, ctasctes_descr[0].length);
     cabecera[0].count = ctasctes_descr[0].length;
-    cabecera[0].cursor_pos = cabecera[0].count;
+    //cabecera[0].cursor_pos = cabecera[0].count;
 
     rightAlign(cabecera[0].input_buffer, ctasctes_descr[0].length);
 
@@ -2410,7 +2425,6 @@ void agregarCtacte()
 
     rightAlign(cabecera[3].input_buffer, ctasctes_descr[3].length);
     exit = strncmp(cabecera[3].input_buffer, "   0", ctasctes_descr[3].length);
-    //mvprintw(2, 2, "1%d1", exit);
 
     if (exit == 0)
     {
@@ -2431,7 +2445,7 @@ void agregarCtacte()
     }
   } while(repeat);
 
-  //gets client data and print it on the screen
+  //get client data and print it on the screen
 
   cli_ptr = fopen(cliPro, "r+b");
 
@@ -2476,11 +2490,11 @@ void agregarCtacte()
 
   if(atonum(cliAcr) > atonum(cliDeu))
   {
-    mvprintw(13, 64, "%s", saldo);//es una cadena
+    mvprintw(13, 64, "%s", saldo);
   }
   else
   { 
-    mvprintw(14, 64, "%s", saldo);//es una cadena 
+    mvprintw(14, 64, "%s", saldo);
   }
 
   init_input_field(&operacion[0], "Credito ", ctasctes_descr[5].length , false, 39, 9, FLOAT);
@@ -2525,7 +2539,6 @@ refresh();
         addDecimals(operacion[i].input_buffer, ctasctes_descr[i + 5].length, ctasctes_descr[i + 5].decimal);
       }
       rightAlign(operacion[i].input_buffer, ctasctes_descr[i + 5].length);
-      //opint[i] = atonum(operacion[i].input_buffer);
     }
   }
 
@@ -2546,10 +2559,15 @@ refresh();
   }
 
   
-  //Now update the values of "acreedor" and "deudor" (Edit now testing this functions)
+  //Now update the values of "acreedor" and "deudor" 
   //This is slow i should make a function That sums everything in  
-  //REVISAR
   //also should make a function for this to make it more legible
+  /*
+   * this should need a refactor but the problems are: 
+   *    - We are using a lot of variables
+   *    - the offsets in clientes and proveedores are different which makes the
+   *    refactoring process more convoluted but will reduce repeated code
+   * */
 
   sumFields(cliAcr, operacion[0].input_buffer, cliAcr); //acreedor anterior + credito
   subFields(cliAcr, operacion[2].input_buffer, cliAcr); //-entrego cheque
@@ -2667,7 +2685,7 @@ void agregarOrdCom()
   descriptor compra_descr[20]; // I chose 15 because i Know the file I will be opening has less than 15 fields,
   FILE *pro_ptr = NULL;
   header pro_head[1];
-  descriptor pro_descr[20]; // MAKE SURE YOU DECLARE MORE DESCRIPTORS THAN WHAT'S ON THE DBF FILE, IF YOU DON'T, IT WILL BE THE END OF THE WORLD
+  descriptor pro_descr[20]; //always declare more descriptors than what's on the file
   
   //variables and structs related to COMPRA.dbf
   
@@ -2737,7 +2755,7 @@ for(int i = 0; i < 10; i++)
 
   int iLastOp = atoi(lastOp);
   iLastOp++;
-  memset(lastOp, 0, compra_descr[0].length); //in agregarctacte the lastOp field is 4 bytes here it is 6 because garbage data 
+  memset(lastOp, 0, compra_descr[0].length); //in agregarctacte the lastOp field is 4 bytes here it is 6
   snprintf(lastOp, 7,"%d", iLastOp); //I wasn't aware snprintf truncated the input to ensure null termination so size has to be 7
   //getch();
 
@@ -2746,7 +2764,7 @@ for(int i = 0; i < 10; i++)
     repeat = 0;
     
     init_input_field(&cabecera[0], "OrdCom:[", compra_descr[0].length , false, 5, 2, INTEGER); //automatically write last op. + 1
-    init_input_field(&cabecera[1], "Fecha: ", compra_descr[1].length, false, 28, 2, DATE); //should make a date parser
+    init_input_field(&cabecera[1], "Fecha: ", compra_descr[1].length, false, 28, 2, DATE); 
     init_input_field(&cabecera[2], "factura no.:", compra_descr[2].length, false, 46, 2, STRING); 
     init_input_field(&cabecera[3], "proveedor: ", compra_descr[3].length, false, 8, 4, INTEGER);
 
@@ -2757,11 +2775,11 @@ for(int i = 0; i < 10; i++)
     snprintf(cabecera[1].input_buffer, 9, "%02d%02d%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 
     cabecera[1].count = compra_descr[1].length;
-    cabecera[1].cursor_pos = cabecera[1].count;
+    //cabecera[1].cursor_pos = cabecera[1].count;
 
     memcpy(cabecera[0].input_buffer, lastOp, compra_descr[0].length);
     cabecera[0].count = compra_descr[0].length;
-    cabecera[0].cursor_pos = cabecera[0].count;
+    //cabecera[0].cursor_pos = cabecera[0].count;
 
     rightAlign(cabecera[0].input_buffer, compra_descr[0].length);
 
@@ -2855,11 +2873,11 @@ for(int i = 0; i < 10; i++)
 
   if(atonum(cliAcr) > atonum(cliDeu))
   {
-    mvprintw(13, 64, "%s", saldo);//es una cadena
+    mvprintw(13, 64, "%s", saldo);
   }
   else
   { 
-    mvprintw(14, 64, "%s", saldo);//es una cadena 
+    mvprintw(14, 64, "%s", saldo);
   }
 
   init_input_field(&operacion[0], "Credito ", compra_descr[11].length , false, 39, 9, FLOAT);
@@ -2947,7 +2965,6 @@ refresh();
   
   //Now update the values of "acreedor" and "deudor" (Edit now testing this functions)
   //This is slow i should make a function That sums everything in  
-  //REVISAR
   //also should make a function for this to make it more legible
 
   sumFields(cliAcr, operacion[0].input_buffer, cliAcr); //acreedor anterior + credito
@@ -2956,7 +2973,6 @@ refresh();
   sumFields(cliDeu, operacion[1].input_buffer, cliDeu);
   subFields(cliDeu, operacion[4].input_buffer, cliDeu);
   subFields(cliDeu, operacion[5].input_buffer, cliDeu);
-//mvprintw(0, 0, "%s\n%s", cliAcr, cliDeu);
 
   if(atonum(cliAcr) < 0)
   {
@@ -2968,7 +2984,6 @@ refresh();
     subFields(cliAcr, cliDeu, cliAcr);
     subFields(cliDeu, cliDeu, cliDeu);
   }
-//mvprintw(2, 0, "%s\n%s", cliAcr, cliDeu);
   if(atonum(cliAcr) > atonum(cliDeu))
   {
     subFields(saldo, cliDeu, cliAcr);  
@@ -2983,7 +2998,6 @@ refresh();
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
-    mvprintw(13, 64, "%s", saldo);//It is a string now
   }
   else if(atonum(cliAcr) < atonum(cliDeu))
   {
@@ -2999,13 +3013,8 @@ refresh();
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
-    mvprintw(14, 64, "%s", saldo);//It is a string now
+    mvprintw(14, 64, "%s", saldo);
   }
-
-
-  //iCliAcr = iCliAcr + opint[0] - opint[2] - opint[3];
-  //iCliDeu = iCliDeu + opint[1] - opint[4] - opint[5];
-
   //Added Memo functionality
 
   int check = yesNoMenu("CONFIRMA", 19, 30, "REPITE", 19, 45);
@@ -3036,11 +3045,6 @@ refresh();
 
   }
 
-//mvprintw(0, 0, "%s\n%s %x %s", buffer, cabecera[3].input_buffer, pos, lastOp);
-//mvprintw(20, 0, "%s", cliAcr);
-//printw("\n%s", cliDeu);
-//printw("\n%s", saldo);
-//getch();
   
   free(cabecera[0].prompt);
   free(cabecera[1].prompt);
@@ -3192,11 +3196,11 @@ mvprintw(0, 0, "indice = %d", indice);
 
   if(atonum(cliAcr) > atonum(cliDeu))
   {
-    mvprintw(13, 64, "%s", saldo);//es una cadena
+    mvprintw(13, 64, "%s", saldo);
   }
   else
   { 
-    mvprintw(14, 64, "%s", saldo);//es una cadena 
+    mvprintw(14, 64, "%s", saldo);
   }
 
 //end copy paste
@@ -3279,7 +3283,7 @@ mvprintw(0, 0, "indice = %d", indice);
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
-    mvprintw(13, 64, "%s", saldo);//It is a string now
+    mvprintw(13, 64, "%s", saldo);
   }
   else if(atonum(cliAcr) < atonum(cliDeu))
   {
@@ -3296,7 +3300,7 @@ mvprintw(0, 0, "indice = %d", indice);
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
-    mvprintw(14, 64, "%s", saldo);//It is a string now
+    mvprintw(14, 64, "%s", saldo);
   }
 
     ctasctes_ptr = fopen("CTASCTES.DBF", "r+b");
@@ -3487,9 +3491,7 @@ void modCom()
 
   get_data(cliDeu, Proveedor, pro_descr[13].fieldname, pro_ptr, pro_head, pro_descr);
 
-
   get_data(cliAcr, Proveedor, pro_descr[12].fieldname, pro_ptr, pro_head, pro_descr);
-
 
 //cliDeu and cliAcr Should look like something between X.XX or XXXXXXXXX.XX X being a digit
   rightAlign(cliAcr, pro_descr[12].length);
@@ -3503,11 +3505,11 @@ void modCom()
 
   if(atonum(cliAcr) > atonum(cliDeu))
   {
-    mvprintw(13, 64, "%s", saldo);//es una cadena
+    mvprintw(13, 64, "%s", saldo);
   }
   else
   { 
-    mvprintw(14, 64, "%s", saldo);//es una cadena 
+    mvprintw(14, 64, "%s", saldo);
   }
 
 //end copy paste
@@ -3607,7 +3609,7 @@ void modCom()
 
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
-    mvprintw(14, 64, "%s", saldo);//It is a string now
+    mvprintw(14, 64, "%s", saldo);
   }
 
     compra_ptr = fopen(compras, "r+b");
@@ -3703,7 +3705,7 @@ void consCli()
   store_header_data(cliHead, cliPtr, 0);
   store_descriptor_data(cliDescr, cliPtr);
 
-  //Setting up the pseudoindexes (a fast one while i crack the DBase one)
+  //Setting up the pseudoindexes (a fast one while i crack the CLIPPER one)
 
   size_t codiIndex[2500];
   size_t razonIndex[2500];
@@ -3784,9 +3786,11 @@ void agregarCli()
   draw_background_submenu(x, y, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
   recuadro(x, y, FIELD_NAME + CLI_MAX_LENGTH + 3, nOfDescr + 2);
   /*
-  I'm too lazy to make an automatic type recognition so i declared it here manually mostly because dbf 
-  numbers are declared as N so no actual distinction between floats and ints, you can only infer it from
-  looking at the decimal places in the descriptor
+  I declared the types here manually mostly because Ints and Floats are
+  'N' or numeric in the field descriptor (Even thugh they are saved as strings
+  at the end of the day). Secondly 'C' or Character fields have no distinction
+  between lowercase and uppercase (CAP), Which is relevant information for the 
+  input stream.
   */
   int types[] = {INTEGER, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, FLOAT, DATE, FLOAT, FLOAT, FLOAT, FLOAT};
   agregarReg("CLIPRO.dbf", types, x + 4, y + 1);
@@ -3859,7 +3863,7 @@ void deudores()
     if(!check)
     {
      //mvprintw(0, 0, "%s\nEliminado", &buffer[k * offsets[2]]); getch();
-      k++; //Necesito Eliminar los valores que tengan 0 en el saldo
+      k++; 
       //CHECKSTACKX(index, 100);
       //printw("%s",&buffer[k * offsets[2] + saldoOffset]);
     }
@@ -4316,7 +4320,7 @@ void acreedores()
     check = strncmp(zero, &buffer[k * offsets[2] + saldoOffset], proDescr[12].length);
     if(!check)
     {
-      k++; //Necesito Eliminar los valores que tengan 0 en el saldo
+      k++; 
       //CHECKSTACKX(index, 100);
       //printw("%s",&buffer[k * offsets[2] + saldoOffset]);
     }
@@ -4498,7 +4502,6 @@ void consCheque()
 
 void chequesNoEntregados()
 {
-  //de momento solo lista los cheques que no fueron entregados, pero no necesariamente en termino
   FILE* fPtr = NULL;
   descriptor ch_descr[25];
   header ch_head[1];  
@@ -4540,8 +4543,6 @@ void chequesNoEntregados()
   char *testBuffer = (char*)malloc(ch_head->record_bytes*200 * sizeof(char));
   
   nOfInd = extCoinFields(config, testBuffer, "        ");
-  // Hasta ahora solo separa los cheques que no fueron entregados
-  
   
   vScroller(testBuffer, 0, 2, 19, nOfInd, index);
   
@@ -4556,6 +4557,8 @@ void chequesNoEntregados()
   return;  
 }
 
+// Feel free to test functions here when you compile and open TETE.exe go to 
+// DEBUG
 
 void funcTest()
 {
@@ -4660,3 +4663,5 @@ void funcTest()
   
   return;  
 }
+
+
