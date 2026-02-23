@@ -86,3 +86,4 @@ int addMemo(const char* fileName, char* buffer);
 int replaceMemo(const char* fileName, char* buffer, int blockNum);
 
 #endif
+

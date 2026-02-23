@@ -74,6 +74,8 @@ void rightAlign(char *string, const size_t size)
 
 int addDecimals(char *string, const size_t size, const size_t decimals)
 {
+  /* As of right now there is one edge case which should be addressed:
+   * */
   if(size <= decimals) return -1;
   int dotCheck = 0;
 
@@ -91,6 +93,7 @@ int addDecimals(char *string, const size_t size, const size_t decimals)
   { 
     string[0] = '0';
   }
+  // Should handle the case  for a number like .XX
   for(int i = numPos; i < size; i++)
   {
     if((string[i] == ' ' || string[i] == '\0') && i < size - decimals && dotCheck == 0)
@@ -107,7 +110,7 @@ int addDecimals(char *string, const size_t size, const size_t decimals)
       dotCheck = 1;
       for(int j = 0; j < decimals; j++)
       {
-        if(string[i] == ' ')
+        if(string[i + j + 1] == ' ' || string[i + j + 1] == '\0')
         {
           string[i + j + 1] = '0';
         }
@@ -137,6 +140,7 @@ int addDecimals(char *string, const size_t size, const size_t decimals)
     {
       string[dot] = ' ';
       dot++;
+
     }
   }
   string[dot] = '\0';
@@ -159,8 +163,6 @@ size_t store_header_data(header *head, FILE *file, int i)
 	memset(buffer, 0, FIELD_SIZE);
 
 	fseek(file, 0, SEEK_SET);
-
-	//fread(variable donde vas a guardar, tamaño del dato que vas a leer, cantidad de datos que vas a leer, puntero al archivo)
 
 	fread(buffer, 1, sizeof(head->dbfversion), file); //this should be interpreted as 8 1bit flags
 	memcpy((&head[i].dbfversion), buffer, sizeof(head->dbfversion));
@@ -228,13 +230,11 @@ void store_descriptor_data(descriptor *fields, FILE *file)
 		fread(buffer, sizeof(fields->fieldname), 1, file);
 		memcpy((&fields[index].fieldname), buffer, sizeof(fields->fieldname));
 
+    //Remember TERMINATOR is 0x0d
 		if (buffer[0] == TERMINATOR) 
 		{
 			break;
 		}
-
-		// ENCONTRAR 0x0d!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 		fread(buffer, sizeof(fields->type), 1, file);
 		memcpy((&fields[index].type), buffer, sizeof(fields->type));
@@ -270,7 +270,8 @@ void store_descriptor_data(descriptor *fields, FILE *file)
 
 int get_index(const char* campo, const char* string, FILE* file, header* head, descriptor* descr)
 {
-	//busco el indice del campo
+	/* busco el indice del campo 
+   * */
 
 	if (strlen(string) > MAX_FIELD_LENGTH) 
 	{
@@ -297,11 +298,15 @@ int get_index(const char* campo, const char* string, FILE* file, header* head, d
 	}
 
 
-	//pongo el cursor en el lugar donde compienzan los registros
-
+	/* pongo el cursor en el lugar donde comienzan los registros
+   * 
+   * place the cursor on the place where the records start
+    */
 	fseek(file, head[0].header_bytes, SEEK_SET);
 	
-	//offseteo el puntero al valor decriptor[0].length + ... + descriptor[indice].length
+	/* offseteo el puntero al valor decriptor[0].length + ... + descriptor[indice].length
+   * I offset the pointer to the value descriptor[0].length + ... + descriptor[indice].length
+   */
 
 	while(j < i) 
 	{
@@ -309,18 +314,21 @@ int get_index(const char* campo, const char* string, FILE* file, header* head, d
 	  j++;
 	}
 
-	fseek(file, offset + 1, SEEK_CUR);
+	fseek(file, offset + 1, SEEK_CUR); 
 
-	//loopeo 
-
-	//leo el valor del campo y comparo con el string que quiero buscar
+	/* leo el valor del campo y comparo con el string que quiero buscar 
+   * I read the field's value and compare it with the string i'm looking for
+   * */
 
 	while(check != 0 && rindex < head[0].nofrecords) 
 	{
 	  fread(buffer, descr[i].length, 1, file);
 	  check = strncmp(string, buffer, descr[i].length);
 
-	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
+/* avanzo en (tama�o del registro) - (tama�o del campo)
+ *
+ * step by (record size) - (field size) 
+ */
 
 	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 	  rindex++;
@@ -360,11 +368,16 @@ int get_incomplete_index(const char* campo, const char* string, FILE* file, head
 	}
 
 
-	//pongo el cursor en el lugar donde compienzan los registros
+	/* pongo el cursor en el lugar donde comienzan los registros
+   * 
+   * place the cursor on the place where the records start
+   */
 
 	fseek(file, head[0].header_bytes, SEEK_SET);
 	
-	//offseteo el puntero al valor decriptor[0].length + ... + descriptor[indice].length
+	/* offseteo el puntero al valor decriptor[0].length + ... + descriptor[indice].length
+   * I offset the pointer to the value descriptor[0].length + ... + descriptor[indice].length
+   */
 
 	while(j < i) 
 	{
@@ -374,16 +387,19 @@ int get_incomplete_index(const char* campo, const char* string, FILE* file, head
 
 	fseek(file, offset + 1, SEEK_CUR);
 
-	//loopeo 
-
-	//leo el valor del campo y comparo con el string que quiero buscar
+	/* leo el valor del campo y comparo con el string que quiero buscar 
+   * I read the field's value and compare it with the string i'm looking for
+   * */
 
 	while(check != 0 && rindex < head[0].nofrecords) 
 	{
 	  fread(buffer, descr[i].length, 1, file);
 	  check = strncmp(string, buffer, strnlen(string, 255));
 
-	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
+/* avanzo en (tama�o del registro) - (tama�o del campo)
+ *
+ * step by (record size) - (field size) 
+ */
 
 	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 	  rindex++;
@@ -394,6 +410,9 @@ int get_incomplete_index(const char* campo, const char* string, FILE* file, head
 		
 }
 
+/* Might need to refactor the next 4 functions into one with a setting 
+ * but that might need a new struct
+ */
 
 int get_indexes_neq(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr)
 {
@@ -425,8 +444,10 @@ int get_indexes_neq(int* indexes, const char* campo, const char* string, FILE* f
   memset(buffer2, 0, MAX_FIELD_LENGTH + 1);
 	//fseek(file, FIELD_SIZE, SEEK_SET);
   
-  //add upper bound to the loop (254 which is the max amount of fields)
-	while(strncmp(descr[i].fieldname, campo, FIELD_NAME)) 
+  /* add upper bound to the loop (254 which is the max amount of fields)
+   * need to have a way to handle maliciously crafted data
+   */
+	while(strncmp(descr[i].fieldname, campo, FIELD_NAME) && i < MAX_DBF_FIELDS) 
 	{
 	  i++;
 	  if(descr[i].fieldname[0] == 0x0d)
@@ -435,13 +456,8 @@ int get_indexes_neq(int* indexes, const char* campo, const char* string, FILE* f
 	  }
 	}
 
-
-	//pongo el cursor en el lugar donde compienzan los registros
-
 	fseek(file, head[0].header_bytes, SEEK_SET);
 	
-	//offseteo el puntero al valor decriptor[0].length + ... + descriptor[indice].length
-
 	while(j < i) 
 	{
 	  offset += descr[j].length; 
@@ -450,11 +466,7 @@ int get_indexes_neq(int* indexes, const char* campo, const char* string, FILE* f
 
 	fseek(file, offset + 1, SEEK_CUR);
 
-	//loopeo 
-
-	//leo el valor del campo y comparo con el string que quiero buscar
   memcpy(buffer2, string, len);
-  
   
   //right align numbers
   switch(descr[i].type)
@@ -480,8 +492,6 @@ int get_indexes_neq(int* indexes, const char* campo, const char* string, FILE* f
       indexes[k] = rindex;
       k++;
     }
-
-	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
 
 	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 	  rindex++;
@@ -521,7 +531,9 @@ int get_indexes(int* indexes, const char* campo, const char* string, FILE* file,
   memset(buffer2, 0, MAX_FIELD_LENGTH + 1);
 	//fseek(file, FIELD_SIZE, SEEK_SET);
   
-  //add upper bound to the loop (254 which is the max amount of fields)
+  /* add upper bound to the loop (254 which is the max amount of fields)
+   * need to have a way to handle maliciously crafted data
+   */
 	while(strncmp(descr[i].fieldname, campo, FIELD_NAME)) 
 	{
 	  i++;
@@ -577,7 +589,7 @@ int get_indexes(int* indexes, const char* campo, const char* string, FILE* file,
       k++;
     }
 
-	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
+	  //avanzo en header[n].record_bytes (tama�o del registro) - (descriptor[indice del campo].length)
 
 	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 	  rindex++;
@@ -664,7 +676,7 @@ int get_indexes_gr_th(int* indexes, const char* campo, const char* string, FILE*
       k++;
     }
 
-	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
+	  //avanzo en header[n].record_bytes (tama�o del registro) - (descriptor[indice del campo].length)
 
 	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 	  rindex++;
@@ -751,7 +763,7 @@ int get_indexes_lw_th(int* indexes, const char* campo, const char* string, FILE*
       k++;
     }
 
-	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
+	  //avanzo en header[n].record_bytes (tama�o del registro) - (descriptor[indice del campo].length)
 
 	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 	  rindex++;
@@ -844,7 +856,7 @@ int get_indexes_betw(int* indexes, const char* campo, const char* low, const cha
       k++;
     }
 
-	  //avanzo en header[n].record_bytes (tamaño del registro) - (descriptor[indice del campo].length)
+	  //avanzo en header[n].record_bytes (tama�o del registro) - (descriptor[indice del campo].length)
 
 	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 	  rindex++;
@@ -889,7 +901,7 @@ int get_data(char* buffer, int indice, char* campo, FILE* file, header* head, de
 
 	fseek(file, offset + 1, SEEK_CUR);
 
-	//avanzo en los registros en (tamaño en bytes del registro) * el indice obtenido 
+	//avanzo en los registros en (tama�o en bytes del registro) * el indice obtenido 
 	
 	fseek(file, head[0].record_bytes * indice , SEEK_CUR);
 
@@ -935,7 +947,7 @@ int get_bulk_data(char* buffer, int* indices, char* campo, FILE* file, header* h
 
 	fseek(file, offset + 1, SEEK_CUR);
 
-	//avanzo en los registros en (tamaño en bytes del registro) * el indice obtenido 
+	//avanzo en los registros en (tama�o en bytes del registro) * el indice obtenido 
 	
 	fseek(file, head[0].record_bytes * indice , SEEK_CUR);
 
@@ -954,11 +966,9 @@ int get_record(char* buffer, int indice, FILE* file, header* head, descriptor* d
 	
 	//buffer[MAX_FIELD_LENGTH];
 
-	//pongo el cursor en el lugar donde compienzan los registros
-
 	fseek(file, head[0].header_bytes, SEEK_SET);
 
-	//avanzo en los registros en (tamaño en bytes del registro) * el indice obtenido 
+	//avanzo en los registros en (tama�o en bytes del registro) * el indice obtenido 
 	
 	fseek(file, head[0].record_bytes * indice , SEEK_CUR);
 
@@ -1115,13 +1125,8 @@ int replaceField(char* buffer, int indice, char* campo, FILE* file, const header
     }
   }
 
-
-  //pongo el cursor en el lugar donde compienzan los registros
-
   fseek(file, head[0].header_bytes, SEEK_SET);
 	
-  //offseteo el puntero al valor decriptor[0].length + ... + descriptor[indice].length
-
   while(j < i) 
   {
     offset += descr[j].length; 
@@ -1130,8 +1135,6 @@ int replaceField(char* buffer, int indice, char* campo, FILE* file, const header
 
   fseek(file, offset + 1, SEEK_CUR);
 
-  //avanzo en los registros en (tamaño en bytes del registro) * el indice obtenido 
-	
   fseek(file, head[0].record_bytes * indice , SEEK_CUR);
 
   int written = fwrite(formatted, descr[i].length, 1, file);

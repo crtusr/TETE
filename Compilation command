@@ -1,1 +1,0 @@
-gcc main.c fondos.c menu.c -o TETE -lpdcurses

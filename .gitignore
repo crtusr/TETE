@@ -1,8 +1,14 @@
-*.exe
 *.DBF
 *.DBT
-*.NTX
+*.INDEX
+*.bat
 *.txt
+*.NTX
 *.xslx
-*.xlsx
-
+*.c~
+*.exe
+*.un~
+BK/
+DEPRECATED/
+HxD/
+Prueba de campos/

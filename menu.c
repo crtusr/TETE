@@ -45,7 +45,7 @@ static void redibujar_menu_items(
   int col_count = 0;
   int last_y = -1;
 
-  // 1. Limpiar el Ã¡rea del menÃº (Â¡importante antes de redibujar!)
+  // 1. Limpiar el área del menú (¡importante antes de redibujar!)
   // Usa num_rows donde antes usabas menu_height
   for (int r = 0; r < num_rows + 2; r++) 
   {
@@ -56,7 +56,7 @@ static void redibujar_menu_items(
     }
   }
 
-  // 2. Dibujar el fondo especÃ­fico del (sub)menÃº si existe
+  // 2. Dibujar el fondo específico del (sub)menú si existe
   // Ver si se puede corregir las variables de manera que el orden de los items no afecte a la caja
   if (menu->draw_background != NULL) 
   {
@@ -68,7 +68,7 @@ static void redibujar_menu_items(
     menu->pre_background();
   }
 
-  // 3. Dibujar los items del menÃº
+  // 3. Dibujar los items del menú
   i = 0;
   current_row_index = 0;
   col_count = 0;
@@ -91,14 +91,14 @@ static void redibujar_menu_items(
       //aqui Pondria en color rojo
       attron(COLOR_PAIR(1));
     }
-    // Dibujar texto y posible indicador de submenÃº
-    // AsegÃºrate de que las coordenadas no sean negativas
+    // Dibujar texto y posible indicador de submenú
+    // Asegúrate de que las coordenadas no sean negativas
     if (menu[i].y >= 0 && menu[i].x >= 0) {
       mvprintw(menu[i].y, menu[i].x, "%s", menu[i].text);
       if (menu[i].submenu != NULL) {
-        // Asegura no escribir fuera de lÃ­mites si el texto es muy largo
+        // Asegura no escribir fuera de límites si el texto es muy largo
          int text_len = strlen(menu[i].text);
-         if (menu[i].x + text_len >= 0) { // Verifica la posiciÃ³n x del ">"
+         if (menu[i].x + text_len >= 0) { // Verifica la posición x del ">"
           mvprintw(menu[i].y, menu[i].x + text_len, " >");
          }
       }
@@ -111,11 +111,11 @@ static void redibujar_menu_items(
     i++;
     col_count++;
   }
-  // refresh() se llamarÃ¡ despuÃ©s de esta funciÃ³n en dibujar_menu
+  // refresh() se llamará después de esta función en dibujar_menu
 }
 
 
-// --- FunciÃ³n principal del menÃº ---
+// --- Función principal del menú ---
 int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) {
   int i = 0;
   int ch;
@@ -128,10 +128,10 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
 
   if (menu == NULL) 
   {
-    return -1; // Error: menÃº invÃ¡lido
+    return -1; // Error: menú inválido
   }
 
-  // --- Pre-cÃ¡lculo de dimensiones (sin cambios) ---
+  // --- Pre-cálculo de dimensiones (sin cambios) ---
   while (menu[i].text != NULL)
   {
     int text_width = strlen(menu[i].text);
@@ -178,22 +178,22 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
       if (i != 0) current_row_index++;
       last_y = menu[i].y;
     }
-    // Asegurarse de no escribir fuera de los lÃ­mites del array
+    // Asegurarse de no escribir fuera de los límites del array
     if (current_row_index < num_rows) 
     {
        num_cols_per_row[current_row_index]++;
     } 
     else 
     {
-      // Esto indicarÃ­a un problema en la lÃ³gica de cÃ¡lculo de num_rows
-      // o en la estructura del menÃº (items con 'y' fuera de secuencia)
-      // Considera aÃ±adir un mensaje de error o manejarlo
+      // Esto indicaría un problema en la lógica de cálculo de num_rows
+      // o en la estructura del menú (items con 'y' fuera de secuencia)
+      // Considera añadir un mensaje de error o manejarlo
     }
     i++;
   }
   // --- Dibujo inicial ---
   if (level == 0) 
-  { // Solo para el menÃº principal (nivel 0)
+  { // Solo para el menú principal (nivel 0)
     clear(); // Limpia toda la pantalla
     if (menu->pre_background != NULL) 
     {
@@ -209,12 +209,12 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
   while (1) 
   {
     ch = getch();
-    bool needs_redraw = false; // Para optimizar redibujos si no cambia la selecciÃ³n
+    bool needs_redraw = false; // Para optimizar redibujos si no cambia la selección
 
     switch (ch) {
       case KEY_UP:
         if (num_rows > 0) 
-        { // Evitar divisiÃ³n por cero si no hay filas
+        { // Evitar división por cero si no hay filas
           int prev_row = current_row;
           current_row = (current_row - 1 + num_rows) % num_rows;
           // Ajustar columna si la nueva fila tiene menos columnas
@@ -259,7 +259,7 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
       {
         int item_index = 0;
         int row_count = 0;
-        // Calcular el Ã­ndice lineal del item seleccionado
+        // Calcular el índice lineal del item seleccionado
         while (row_count < current_row && row_count < num_rows) 
         {
           item_index += num_cols_per_row[row_count];
@@ -267,58 +267,58 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
         }
         item_index += current_col;
 
-        // Verificar que el Ã­ndice calculado es vÃ¡lido
-        // Contar el nÃºmero total de items para seguridad
+        // Verificar que el índice calculado es válido
+        // Contar el número total de items para seguridad
         int total_items = 0;
         while(menu[total_items].text != NULL) total_items++;
 
         if (item_index < total_items) 
-        { // Asegurarse que el Ã­ndice es vÃ¡lido
+        { // Asegurarse que el índice es válido
           MenuItem *selected_item = &menu[item_index];
           if (selected_item->action != NULL) 
           {
-            selected_item->action(); // Ejecutar acciÃ³n
-            // Comprobar si la acciÃ³n fue salir del submenÃº
+            selected_item->action(); // Ejecutar acción
+            // Comprobar si la acción fue salir del submenú
             if (strcmp(selected_item->text, "Retroceder") == 0 || strcmp(selected_item->text, "Menu anterior") == 0)
             {
               free(num_cols_per_row);
-              // No limpiar ni redibujar aquÃ­, eso lo harÃ¡ el nivel superior
-              return 0; // CÃ³digo para indicar retroceso normal
+              // No limpiar ni redibujar aquí, eso lo hará el nivel superior
+              return 0; // Código para indicar retroceso normal
             }
-            // Si no fue retroceder, necesitamos redibujar el menÃº actual
+            // Si no fue retroceder, necesitamos redibujar el menú actual
             needs_redraw = true;
           } 
           else if (selected_item->submenu != NULL) 
           {
-            // Entrar al submenÃº recursivamente
+            // Entrar al submenú recursivamente
             int sub_result = dibujar_menu(selected_item->submenu, 0, 0, level + 1);
-            // DespuÃ©s de salir del submenÃº (sea por ESC o "Retroceder"),
-            // necesitamos redibujar el menÃº actual (padre).
+            // Después de salir del submenú (sea por ESC o "Retroceder"),
+            // necesitamos redibujar el menú actual (padre).
             if (sub_result == -2 && level == 0) 
             {
-              // Si se presionÃ³ ESC en el submenÃº y estamos en el nivel principal, salir
+              // Si se presionó ESC en el submenú y estamos en el nivel principal, salir
                free(num_cols_per_row);
-               return -2; // Propagar salida de la aplicaciÃ³n
+               return -2; // Propagar salida de la aplicación
             }
-             needs_redraw = true; // Siempre redibujar al volver de un submenÃº
+             needs_redraw = true; // Siempre redibujar al volver de un submenú
           } 
           else 
           {
-            // Item sin acciÃ³n ni submenÃº, no hacer nada o dar feedback?
-            beep(); // PodrÃ­a ser Ãºtil indicar que no hace nada
+            // Item sin acción ni submenú, no hacer nada o dar feedback?
+            beep(); // Podría ser útil indicar que no hace nada
           }
         } 
         else 
         {
-           // Ãndice invÃ¡lido, probablemente un error lÃ³gico anterior
+           // Índice inválido, probablemente un error lógico anterior
            beep();
         }
 
-        // --- Redibujar DESPUÃ‰S de acciÃ³n o volver de submenÃº ---
+        // --- Redibujar DESPUÉS de acción o volver de submenú ---
         if (needs_redraw) 
         {
           if (level == 0) 
-          { // MenÃº principal
+          { // Menú principal
             clear(); // Limpiar todo
             if (menu->pre_background != NULL) 
             {
@@ -327,49 +327,49 @@ int dibujar_menu(MenuItem *menu, int selected_row, int selected_col, int level) 
             redibujar_menu_items(menu, current_row, current_col, max_width, num_rows, num_cols_per_row);
           } 
           else 
-          { // SubmenÃº
-            // Solo redibuja los items (y su fondo especÃ­fico si lo tiene)
-            // sin llamar a clear() para no borrar el menÃº padre
+          { // Submenú
+            // Solo redibuja los items (y su fondo específico si lo tiene)
+            // sin llamar a clear() para no borrar el menú padre
             redibujar_menu_items(menu, current_row, current_col, max_width, num_rows, num_cols_per_row);
           }
           refresh(); // Actualizar pantalla
-          needs_redraw = false; // Ya se redibujÃ³
+          needs_redraw = false; // Ya se redibujó
         }
 
       } // Fin bloque case Enter
-      break; // Â¡Importante! Faltaba este break
+      break; // ¡Importante! Faltaba este break
 
       case 27: // ESC
         free(num_cols_per_row);
         if (level > 0) 
         {
-          return 0; // Salir del submenÃº (cÃ³digo 0 para indicar salida normal por ESC)
-                // No redibujar aquÃ­, el nivel superior lo harÃ¡.
+          return 0; // Salir del submenú (código 0 para indicar salida normal por ESC)
+                // No redibujar aquí, el nivel superior lo hará.
         } 
         else 
         {
-          return -2; // Salir de la aplicaciÃ³n desde el menÃº principal
+          return -2; // Salir de la aplicación desde el menú principal
         }
-        // No se necesita break despuÃ©s de return
+        // No se necesita break después de return
 
       default:
         // Ignorar otras teclas o hacer beep()
         // beep();
-        break; // AÃ±adido por coherencia
+        break; // Añadido por coherencia
 
     } // Fin switch(ch)
 
-     // --- Redibujar si cambiÃ³ la selecciÃ³n (movimiento) ---
+     // --- Redibujar si cambió la selección (movimiento) ---
     if (needs_redraw) 
     {
-      // Llama a la funciÃ³n auxiliar externa para redibujar solo los items
+      // Llama a la función auxiliar externa para redibujar solo los items
       redibujar_menu_items(menu, current_row, current_col, max_width, num_rows, num_cols_per_row);
       refresh(); // Actualiza la pantalla
     }
 
   } // Fin while(1)
 
-  // CÃ³digo inalcanzable debido al bucle infinito y los returns, pero por completitud:
+  // Código inalcanzable debido al bucle infinito y los returns, pero por completitud:
   free(num_cols_per_row);
   return 0;
 }

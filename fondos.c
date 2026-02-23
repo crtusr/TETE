@@ -69,7 +69,7 @@ void menu_principal() {
 
 	time_t t = time(NULL);
 	struct tm tm = *localtime(&t);
-	mvprintw(15, 3, "%02d/%02d/%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900); //Se aÃ±ade la fecha.
+	mvprintw(15, 3, "%02d/%02d/%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900); //Se añade la fecha.
 
 }
 

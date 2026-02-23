@@ -992,7 +992,7 @@ static int extNeqFields(const SearchConfig* config, char* buffer, const char* to
   if(err)
   {
     mvprintw(0, 0, "Error: %d", err);
-    
+    return -3;
   }
 
   for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
@@ -1442,7 +1442,7 @@ static void vScroller2(char* buffer,
 
 /*
 Esta funcion es para todas las opciones de salida por IMPRESORA 
-que se reimplementÃ³ para que lo guarde en un archivo de texto
+que se reimplementó para que lo guarde en un archivo de texto
 
 This function is for every option that has an output via PRINTER,
 it was reimplemented to save it as a .txt file as the original 
@@ -3694,7 +3694,7 @@ void modCom()
   return;
 }
 
-//pestaÃ±a clientes
+//pestaña clientes
 
 
 void consCli()
