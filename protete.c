@@ -17,7 +17,7 @@ static void dateRectifier(char* date)
 {
   /*
    *  the date is 8 char + 2 separators + null terminator added by snprintf;
-   * */
+   */
   char rightDate[11]; 
   snprintf(rightDate, 11, "%c%c-%c%c-%c%c%c%c", date[6], date[7], date[4], date[5], date[0], date[1], date[2] , date[3]);
   memcpy(date, rightDate, 10);
@@ -38,7 +38,6 @@ static void encodeMemo(char* encoded, InputField* memo)
       break;
     }
   }
-  //printf("%d *%x*", lastLine, memo[0].input_buffer[0]);
   for(int i = 0; i <= lastLine; i++)
   {
     for(int j = 0; j < 31; j++)
