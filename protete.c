@@ -2761,9 +2761,7 @@ for(int i = 0; i < 10; i++)
 
   int iLastOp = atoi(lastOp);
   iLastOp++;
-
   const unsigned int excededOp = 999999;
-  iLastOp++; 
   if(iLastOp > excededOp) 
   {
     mvprintw(0, 0, "Se exedió el numero de operaciones");
