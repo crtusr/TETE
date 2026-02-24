@@ -4,7 +4,7 @@
 *.bat
 *.txt
 *.NTX
-*.xslx
+*.xlsx
 *.c~
 *.exe
 *.un~
