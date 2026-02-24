@@ -826,7 +826,7 @@ static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
       {
         if(j > 0) 
         {
-          buffer[off] = '¦';
+          buffer[off] = '|';
           off++;
         }
         get_data(&buffer[off], indicesUnion[i], fields[j].fieldName, fPtr, head, descr);
@@ -841,7 +841,7 @@ static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
         off += fieldSizes[j];
         if(j == nOfFields - 1)
         {
-          buffer[off] = '¦';
+          buffer[off] = '|';
           off++;
           subFields(&buffer[off], deudo, acree);
           rightAlign(&buffer[off], saldoSize);
@@ -2391,9 +2391,16 @@ void agregarCtacte()
     return;
   }
 
-  int iLastOp = atoi(lastOp);
-  iLastOp++;
-  snprintf(lastOp, 5,"%4d", iLastOp); //I wasn't aware snprintf truncated the input to ensure null termination so size has to be 5
+  unsigned int iLastOp = atoi(lastOp);
+  const unsigned int excededOp = 9999;
+  iLastOp++; 
+  if(iLastOp > excededOp) 
+  {
+    mvprintw(0, 0, "Se exedió el numero de operaciones");
+    getch();
+    return;
+  }
+  snprintf(lastOp, 5,"%4u", iLastOp); //I wasn't aware snprintf truncated the input to ensure null termination so size has to be 5
   //getch();
 
   do
@@ -2408,7 +2415,7 @@ void agregarCtacte()
 
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
-    snprintf(cabecera[1].input_buffer, 9, "%02d%02d%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+    strftime(cabecera[1].input_buffer, 9, "%d%m%Y", &tm);
 
     cabecera[1].count = ctasctes_descr[1].length;
     //cabecera[1].cursor_pos = cabecera[1].count;
@@ -2755,8 +2762,17 @@ for(int i = 0; i < 10; i++)
 
   int iLastOp = atoi(lastOp);
   iLastOp++;
+
+  const unsigned int excededOp = 999999;
+  iLastOp++; 
+  if(iLastOp > excededOp) 
+  {
+    mvprintw(0, 0, "Se exedió el numero de operaciones");
+    getch();
+    return;
+  }
   memset(lastOp, 0, compra_descr[0].length); //in agregarctacte the lastOp field is 4 bytes here it is 6
-  snprintf(lastOp, 7,"%d", iLastOp); //I wasn't aware snprintf truncated the input to ensure null termination so size has to be 7
+  snprintf(lastOp, compra_descr[0].length + 1,"%d", iLastOp); //I wasn't aware snprintf truncated the input to ensure null termination so size has to be 7
   //getch();
 
   do
@@ -2772,7 +2788,7 @@ for(int i = 0; i < 10; i++)
 
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
-    snprintf(cabecera[1].input_buffer, 9, "%02d%02d%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+    strftime(cabecera[1].input_buffer, 9, "%d%m%Y", &tm);
 
     cabecera[1].count = compra_descr[1].length;
     //cabecera[1].cursor_pos = cabecera[1].count;

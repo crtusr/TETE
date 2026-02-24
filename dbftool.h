@@ -74,7 +74,7 @@ int get_data(char* buffer, int indice, char* campo, FILE* file, header* head, de
 int get_record(char* buffer, int indice, FILE* file, header* head, descriptor* descr);
 void rightAlign(char *string, size_t size);
 int readMemo(char* buffer, char* file, const int block);
-int replaceField();
+int replaceField(char* buffer, int indice, char* campo, FILE* file, const header* head, const descriptor* descr);
 void dateFormatter(char* date);
 long long atonum(const char* number);
 void spaceFill(char *string, size_t size);

@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <curses.h> // for debugging
-#include "debug.h"
+//#include "debug.h"
 
 #define FIELD_SIZE 32L
 #define FIELD_NAME 11L
