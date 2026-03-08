@@ -79,7 +79,7 @@ size_t getIndexedIndex(char* key, IHeader* iHead, FILE* fPtr)
       check = strncmp(buffer, key, iHead->keySize);
       if(check == 0) return dbfIndex; // found
       else if((check > 0 && leftPage) || (leftPage && ind == nOfPageInd)) currPage = leftPage; //key is in child node
-      else if((check > 0 && !leftPage) || ind >= nOfPageInd) return -1; //Not found
+      else if((check > 0 && !leftPage) || ind >= nOfPageInd) return NOT_FOUND; //Not found
       ind++;
     }
   }
@@ -256,7 +256,7 @@ int makeIndex(char* fieldName, FILE* fPtr, char* iName)
   free(pageBuffer);
   free(buffer);
   free(index);
-  return 0;
+  return SUCCESS;
 
 error:
 
@@ -277,9 +277,7 @@ int makeIndexShort(char* key, char* fName, char* iName)
   }
 
   int err = makeIndex(key, dbfPtr, iName);
-
-  if(!err) printf("index %s was succesfully created", iName);
-  else
+  if(err)
   {
     return err;
   }
@@ -290,4 +288,5 @@ int makeIndexShort(char* key, char* fName, char* iName)
   }
   return 0;
 }
+
 
