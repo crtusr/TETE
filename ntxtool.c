@@ -182,7 +182,7 @@ int makeIndex(char* fieldName, FILE* fPtr, char* iName)
     get_data(&buffer[i * iHead->keySize], i, fieldName, fPtr, head, descr);
   }
   
-  bSortStr(buffer, index, head->nofrecords, iHead->keySize);
+  bSortStr2(buffer, index, head->nofrecords, iHead->keySize);
   
   //set page offsets since it should be always the same in a clean page
   for(size_t i = 0; i <= maxPageEntries; i++)

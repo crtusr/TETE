@@ -2,6 +2,7 @@
 #define DBFTOOL_H
 
 #include <inttypes.h>
+#include <stdio.h>
 
 #define FIELD_SIZE 32L
 #define FIELD_NAME 11L
@@ -61,7 +62,7 @@ typedef struct {
 } descriptor;
 
 
-size_t store_header_data(header *head, FILE *file, int i);
+size_t store_header_data(header *head, FILE* file, int i);
 void store_descriptor_data(descriptor *fields, FILE *file);
 int get_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);
 int get_incomplete_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);

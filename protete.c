@@ -9,7 +9,9 @@
 #include "menu.h"
 #include "protete.h"
 #include "inputfields.h"
+#include "utilities.h"
 #include "dbftool.h"
+#include "ntxtool.h"
 //#include "debug.h"
 
 //                                *****Formatting functions*****
@@ -308,32 +310,6 @@ static void calculateOffset(SearchFields* fields, const char* field, size_t* off
   return;
 }
 //pRecord prints the record in a <<DESCRIPTOR: FIELD>> pair per line Trying to emulate the original Code.
-// Using bubble sort for testing sorting by index instead of in place. Replace it in the future with quicksort
-static void bSortStr(char* buffer, int* index, size_t size, size_t* off)
-{
-  int temp;
-  size_t len;
-  if(!off[2]) len = strnlen(buffer, MAX_FIELD_LENGTH) + 1;
-  else len = off[2];
-  int check = 0;
-  while(size > 1)
-  {
-    for(int j = 1; j < size; j++)
-    {
-      //This comparison must take into account the space between fields (not happening right now)
-      check = strncmp(&buffer[index[j]*len + off[0]], &buffer[(index[j - 1])*len + off[0]], off[1]);
-      if(check < 0)
-      {
-        temp = index[j - 1];
-        index[j - 1] = index[j];
-        index[j] = temp;
-      }
-    }
-    size--;
-  }
-  return;
-}
-
 static void zeroFill(char* sto)
 {
   for(int i = 0; i < 4; i++)
@@ -595,7 +571,7 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
   
   // check for data
   
-  for(int i = 0; i < nOfDescr; i++)
+  for(size_t i = 0; i < nOfDescr; i++)
   {
     if(field[i].type == STRING || field[i].type == CAP)
     {
@@ -625,6 +601,7 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
   buffer[off] = 0x1a;
   
   addRecord(buffer, fName, head[0].record_bytes);
+  makeIndexShort("OPERAC","CTASCTES.DBF","CTASOPE.NTX");
   
 mvprintw(0, 0, "%s %d", buffer, strlen(buffer));
 getch();
@@ -789,7 +766,7 @@ static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-  for(int i = 0; i < nOfFields; i++)
+  for(size_t i = 0; i < nOfFields; i++)
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
@@ -821,7 +798,7 @@ static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
     off = i * head[0].record_bytes; //should be + 1 but the whole idea of extracting fields is to limit the fields shown
     if(indicesUnion[i] != -1)
     {
-      for(int j = 0; j < nOfFields; j++)
+      for(size_t j = 0; j < nOfFields; j++)
       {
         if(j > 0) 
         {
@@ -886,7 +863,7 @@ static int extCoinFields(const SearchConfig* config, char* buffer, const char* t
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-  for(int i = 0; i < config->nOfFields; i++)
+  for(size_t i = 0; i < config->nOfFields; i++)
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
@@ -908,7 +885,7 @@ static int extCoinFields(const SearchConfig* config, char* buffer, const char* t
   {
     if(indices[i] != -1)
     {
-      for(int j = 0; j < config->nOfFields; j++)
+      for(size_t j = 0; j < config->nOfFields; j++)
       {
         if(j > 0) 
         {
@@ -977,7 +954,7 @@ static int extNeqFields(const SearchConfig* config, char* buffer, const char* to
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-  for(int i = 0; i < config->nOfFields; i++)
+  for(size_t i = 0; i < config->nOfFields; i++)
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
@@ -999,7 +976,7 @@ static int extNeqFields(const SearchConfig* config, char* buffer, const char* to
   {
     if(indices[i] != -1)
     {
-      for(int j = 0; j < config->nOfFields; j++)
+      for(size_t j = 0; j < config->nOfFields; j++)
       {
         if(j > 0) 
         {
@@ -1070,7 +1047,7 @@ static int extGrFields(const SearchConfig* config, char* buffer, const char* toM
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-  for(int i = 0; i < config->nOfFields; i++)
+  for(size_t i = 0; i < config->nOfFields; i++)
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
@@ -1091,7 +1068,7 @@ static int extGrFields(const SearchConfig* config, char* buffer, const char* toM
   {
     if(indices[i] != -1)
     {
-      for(int j = 0; j < config->nOfFields; j++)
+      for(size_t j = 0; j < config->nOfFields; j++)
       {
         if(j > 0) 
         {
@@ -1162,7 +1139,7 @@ static int extLowFields(const SearchConfig* config, char* buffer, const char* to
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-  for(int i = 0; i < config->nOfFields; i++)
+  for(size_t i = 0; i < config->nOfFields; i++)
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
@@ -1183,7 +1160,7 @@ static int extLowFields(const SearchConfig* config, char* buffer, const char* to
   {
     if(indices[i] != -1)
     {
-      for(int j = 0; j < config->nOfFields; j++)
+      for(size_t j = 0; j < config->nOfFields; j++)
       {
         if(j > 0) 
         {
@@ -1256,7 +1233,7 @@ static int extBetwFields(const SearchConfig* config , char* buffer, const char* 
   store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
   
-  for(int i = 0; i < config->nOfFields; i++)
+  for(size_t i = 0; i < config->nOfFields; i++)
   {
     for(int j = 0; j < (head->header_bytes / FIELD_SIZE); j++)
     {
@@ -1277,7 +1254,7 @@ static int extBetwFields(const SearchConfig* config , char* buffer, const char* 
   {
     if(indices[i] != -1)
     {
-      for(int j = 0; j < config->nOfFields; j++)
+      for(size_t j = 0; j < config->nOfFields; j++)
       {
         if(j > 0) 
         {
@@ -1460,7 +1437,7 @@ static void flushToFile(const char* buffer, const size_t lineLength, const size_
     getch();
   }
   
-  for(int i = 0; i < nOfIndexes; i++)
+  for(size_t i = 0; i < nOfIndexes; i++)
   {
     fprintf(texto ,"%s\n", &buffer[i * (lineLength + 1)]);
   }
@@ -1476,7 +1453,7 @@ static void flushToFile(const char* buffer, const size_t lineLength, const size_
 //               *****menu subroutines*****
 
 
-void consulta_operacion(){
+void consulta_operacion(void){
 
   header ctasctes_head[1];
   descriptor ctasctes_descr[MAX_DBF_FIELDS];
@@ -1597,7 +1574,7 @@ void consulta_operacion(){
   
 }
 
-void consulta_compra()
+void consulta_compra(void)
 {
   header compras_head[1]; 
   descriptor compras_descr[MAX_DBF_FIELDS];
@@ -1768,7 +1745,7 @@ void saldoEnOperaciones(char* operaciones, descriptor* descr, size_t nOfInd)
   
 
 
-  for(int i = 0; i < nOfInd; i++)
+  for(size_t i = 0; i < nOfInd; i++)
   {
     for(int j = 0; j < 6; j++)
     {
@@ -1792,7 +1769,7 @@ void saldoEnOperaciones(char* operaciones, descriptor* descr, size_t nOfInd)
   return;
 }
 
-void opsCliPorImpresora()
+void opsCliPorImpresora(void)
 {
   const int indexAlloc = 500;
   header ctasHead[1];
@@ -1823,15 +1800,15 @@ void opsCliPorImpresora()
   
   SearchFields campos[] = 
   {
-    {"OPERAC"},
+    {"OPERAC", YEAR_OFF},
     {"FECHA", YEAR_OFF},
-    {"FACTUR"},
-    {"ACREE"},
-    {"DEUDO"},
-    {"ECHEQ"},
-    {"EEFEC"},
-    {"RCHEQ"},
-    {"REFEC"}
+    {"FACTUR", YEAR_OFF},
+    {"ACREE", YEAR_OFF},
+    {"DEUDO", YEAR_OFF},
+    {"ECHEQ", YEAR_OFF},
+    {"EEFEC", YEAR_OFF},
+    {"RCHEQ", YEAR_OFF},
+    {"REFEC", YEAR_OFF}
   };
 
   SearchConfig config[1] = 
@@ -1861,7 +1838,7 @@ void opsCliPorImpresora()
   return;
 }
 
-void ultimas_op_cli()
+void ultimas_op_cli(void)
 {
   
   /*
@@ -1903,15 +1880,15 @@ void ultimas_op_cli()
   
   SearchFields campos[] = 
   {
-    {"OPERAC"},
+    {"OPERAC", YEAR_OFF},
     {"FECHA", YEAR_OFF},
-    {"FACTUR"},
-    {"ACREE"},
-    {"DEUDO"},
-    {"ECHEQ"},
-    {"EEFEC"},
-    {"RCHEQ"},
-    {"REFEC"}
+    {"FACTUR", YEAR_OFF},
+    {"ACREE", YEAR_OFF},
+    {"DEUDO", YEAR_OFF},
+    {"ECHEQ", YEAR_OFF},
+    {"EEFEC", YEAR_OFF},
+    {"RCHEQ", YEAR_OFF},
+    {"REFEC", YEAR_OFF}
   };
   char tableNames[][8] = 
   {
@@ -2154,7 +2131,7 @@ refresh();
 */
 
 
-void opsComPorImpresora()
+void opsComPorImpresora(void)
 {
   const int indexAlloc = 500;
   header comHead[1];
@@ -2185,15 +2162,15 @@ void opsComPorImpresora()
   
   SearchFields campos[] = 
   {
-    {"ORDCOM"},
+    {"ORDCOM", YEAR_OFF},
     {"FECHA", YEAR_OFF},
-    {"NROFAC"},
-    {"PACREE"},
-    {"PDEUDO"},
-    {"VECHEQ"},
-    {"VEEFEC"},
-    {"VRCHEQ"},
-    {"VREFEC"}
+    {"NROFAC", YEAR_OFF},
+    {"PACREE", YEAR_OFF},
+    {"PDEUDO", YEAR_OFF},
+    {"VECHEQ", YEAR_OFF},
+    {"VEEFEC", YEAR_OFF},
+    {"VRCHEQ", YEAR_OFF},
+    {"VREFEC", YEAR_OFF}
   };
 
   SearchConfig config[1] = 
@@ -2223,7 +2200,7 @@ void opsComPorImpresora()
   return;
 }
 
-void ultimasOpCom()
+void ultimasOpCom(void)
 {
   const int indexAlloc = 500;
   header comHead[1];
@@ -2257,15 +2234,15 @@ void ultimasOpCom()
   
   SearchFields campos[] = 
   {
-    {"ORDCOM"},
+    {"ORDCOM", YEAR_OFF},
     {"FECHA", YEAR_OFF},
-    {"NROFAC"},
-    {"PACREE"},
-    {"PDEUDO"},
-    {"VECHEQ"},
-    {"VEEFEC"},
-    {"VRCHEQ"},
-    {"VREFEC"}
+    {"NROFAC", YEAR_OFF},
+    {"PACREE", YEAR_OFF},
+    {"PDEUDO", YEAR_OFF},
+    {"VECHEQ", YEAR_OFF},
+    {"VEEFEC", YEAR_OFF},
+    {"VRCHEQ", YEAR_OFF},
+    {"VREFEC", YEAR_OFF}
   };
 
   SearchConfig config[1] = 
@@ -2321,7 +2298,7 @@ void ultimasOpCom()
 }
 
 
-void agregarCtacte()
+void agregarCtacte(void)
 { 
   //file names
 
@@ -2329,7 +2306,6 @@ void agregarCtacte()
   char cliPro[15] = "CLIPRO.DBF";
 
   //file pointers
-
   FILE *ctasctes_ptr = NULL;
   header ctasctes_head[1];
   descriptor ctasctes_descr[15]; // I chose 15 because i Know the file I will be opening has less than 15 fields
@@ -2338,7 +2314,6 @@ void agregarCtacte()
   descriptor cli_descr[20]; 
   
   //variables and structs related to CTASCTES.dbf
-  
   InputField cabecera[4];
   int cabeceras = 4;
   InputField operacion[6];
@@ -2347,9 +2322,8 @@ void agregarCtacte()
   char buffer[118 + 50] = {0};
   char memo [10 + 1] = "          ";
   //int opint[6] = {0};
-  
+
   //Variables related to CLIPRO.dbf
-  
   int cliente = 0;
   char nombreCli[35] = {0};
   char cliAcr[35] = {0};
@@ -2357,11 +2331,9 @@ void agregarCtacte()
   char saldo[35] = {0};
 
   //memo variables
-  
   char memoBuff[513] = {0};
 
   //other
-
   int repeat = 0;
   int exit = 0;
 
@@ -2677,7 +2649,7 @@ refresh();
   }
 }
 
-void agregarOrdCom()
+void agregarOrdCom(void)
 { 
   //file names
 
@@ -3079,7 +3051,7 @@ refresh();
   }
 }
 
-void modCtacte()
+void modCtacte(void)
 {
   //file names
 
@@ -3384,16 +3356,11 @@ mvprintw(0, 0, "indice = %d", indice);
   return;
 }
 
-void modCom()
+void modCom(void)
 {
-
-
-  //file names
 
   char compras[15] = "COMPRA.DBF";
   char prove[15] = "PROVE.DBF";
-
-  //file pointers
 
   FILE *compra_ptr = NULL;
   header compra_head[1];
@@ -3401,9 +3368,8 @@ void modCom()
   FILE *pro_ptr = NULL;
   header pro_head[1];
   descriptor pro_descr[20];
-  
+
   //variables and structs related to COMPRA.dbf
-  
   InputField entrada[1];
   int entradas = 1;
   int indice = 0;
@@ -3414,16 +3380,13 @@ void modCom()
   int yesNo = 0;
 
   //Variables related to PROVE.dbf
- 
   int Proveedor = 0;
   char cliAcr[35] = {0};
   char cliDeu[35] = {0};
   char saldo[35] = {0};
 
   //this is the same as consulta_operacion, i'm selecting the op number to modify
-
   init_input_field(&entrada[0], "Operacion: ", 6, false, 5, 2, STRING);
-
   input_fields_loop(entrada, entradas, NULL);
 
   operaciones();
@@ -3453,7 +3416,6 @@ void modCom()
   }
 
   //I init the input fields and copy the values of the fields into input_buffer 
-
   init_input_field(&operacion[0], "Credito ", compra_descr[11].length , false, 39, 9, FLOAT);
   init_input_field(&operacion[1], "Factura$", compra_descr[12].length, false, 39, 10, FLOAT);
   init_input_field(&operacion[2], "Cheque", compra_descr[13].length, false, 4, 17, FLOAT); 
@@ -3695,7 +3657,7 @@ void modCom()
 //pestaña clientes
 
 
-void consCli()
+void consCli(void)
 {
   FILE* cliPtr = NULL;
   header cliHead[1];
@@ -3762,9 +3724,9 @@ void consCli()
       return;
     }
     //find the index in the pseudo index made by me
-    for(int i = 0; i < cliHead->nofrecords; i++)
+    for(uint32_t i = 0; i < cliHead->nofrecords; i++)
     {
-      if(currIndex[i] == indice) 
+      if(currIndex[i] == (size_t)indice) 
       {
         indice = i;
         break;
@@ -3790,7 +3752,7 @@ void consCli()
   return;
 }
 
-void agregarCli()
+void agregarCli(void)
 {
   int nOfDescr = 18;
 	const int x = 19;
@@ -3813,7 +3775,7 @@ void agregarCli()
   return;
 }
 
-void modCli()
+void modCli(void)
 {
   int nOfDescr = 18;
 	const int x = 19;
@@ -3830,7 +3792,7 @@ void modCli()
   return;
 }
 
-void deudores()
+void deudores(void)
 {
   FILE *cliPtr = NULL;
   header cliHead[1];
@@ -3907,7 +3869,7 @@ void deudores()
 //Stock
 
 
-void sto_consulta()
+void sto_consulta(void)
 {
   FILE* stoPtr = NULL;
   header stoHead[1];
@@ -3972,9 +3934,9 @@ void sto_consulta()
       return;
     }
     //find the index in the pseudo index made by me
-    for(int i = 0; i < stoHead->nofrecords; i++)
+    for(size_t i = 0; i < stoHead->nofrecords; i++)
     {
-      if(currIndex[i] == indice) 
+      if(currIndex[i] == (size_t)indice) 
       {
         indice = i;
         break;
@@ -3999,7 +3961,7 @@ void sto_consulta()
   return;
 }
 
-void modStock()
+void modStock(void)
 {
   int nOfDescr = 8;  
 	const int x = 6;
@@ -4015,7 +3977,7 @@ void modStock()
   return;
 }
 
-void agregarStock()
+void agregarStock(void)
 {
   int nOfDescr = 8;
 	const int x = 6;
@@ -4139,21 +4101,21 @@ static void grupoStockPorCriterio(int fieldIndex)
   return;
 }
 
-void grupoPorPrecio()
+void grupoPorPrecio(void)
 {
   grupoStockPorCriterio(6);
   menu_principal();
   return;
 }
 
-void grupoPorNombre()
+void grupoPorNombre(void)
 {
   grupoStockPorCriterio(1);
   menu_principal();
   return;
 }
 
-void grupoPorProv()
+void grupoPorProv(void)
 {
   grupoStockPorCriterio(3);
   menu_principal();
@@ -4161,7 +4123,7 @@ void grupoPorProv()
 }
 
 //proveedores
-void modPro()
+void modPro(void)
 {
   int nOfDescr = 14;
   
@@ -4177,7 +4139,7 @@ void modPro()
   return;
 }
 
-void consPro()
+void consPro(void)
 {
   FILE* proPtr = NULL;
   header proHead[1];
@@ -4243,9 +4205,9 @@ void consPro()
       return;
     }
     //find the index in the pseudo index made by me
-    for(int i = 0; i < proHead->nofrecords; i++)
+    for(uint32_t i = 0; i < proHead->nofrecords; i++)
     {
-      if(currIndex[i] == indice) 
+      if(currIndex[i] == (size_t)indice) 
       {
         indice = i;
         break;
@@ -4271,7 +4233,7 @@ void consPro()
   return;
 }
 
-void agregarPro()
+void agregarPro(void)
 {
   int nOfDescr = 14;
   
@@ -4285,7 +4247,7 @@ void agregarPro()
   return;
 }
 
-void acreedores()
+void acreedores(void)
 {
   FILE *proPtr = NULL;
   header proHead[1];
@@ -4360,7 +4322,7 @@ void acreedores()
   return;
 }
 //Cheques
-void agregarCheque()
+void agregarCheque(void)
 {
   int nOfDescr = 10;
   
@@ -4378,7 +4340,7 @@ void agregarCheque()
   return;
 }
 
-void modCheque()
+void modCheque(void)
 {
   int nOfDescr = 10;
   
@@ -4397,7 +4359,7 @@ void modCheque()
   
 }
 
-void consCheque()
+void consCheque(void)
 {
   FILE* chePtr = NULL;
   header cheHead[1];
@@ -4485,15 +4447,15 @@ void consCheque()
       return;
     }
     //find the index in the pseudo index made by me
-    for(int i = 0; i < cheHead->nofrecords; i++)
+    for(uint32_t i = 0; i < cheHead->nofrecords; i++)
     {
-      if(currIndex[i] == indice) 
+      if(currIndex[i] == (size_t)indice) 
       {
         indice = i;
         break;
       }
     }
-    while(indice >= 0 && indice < cheHead->nofrecords)
+    while(indice >= 0 && (size_t)indice < cheHead->nofrecords)
     {
       pRecordNew("CHE_TERC.DBF", currIndex[indice], x+4, y+1);
       indice = keyControlsHandler(indice);
@@ -4513,7 +4475,7 @@ void consCheque()
   return;
 }
 
-void chequesNoEntregados()
+void chequesNoEntregados(void)
 {
   FILE* fPtr = NULL;
   descriptor ch_descr[25];
@@ -4573,7 +4535,7 @@ void chequesNoEntregados()
 // Feel free to test functions here when you compile and open TETE.exe go to 
 // DEBUG
 
-void funcTest()
+void funcTest(void)
 {
   FILE* fPtr = NULL;
   descriptor descr[25];
@@ -4613,7 +4575,7 @@ void funcTest()
 
   size_t fieldOff[3] = {0};
   calculateOffset(achtung, descr[1].fieldname, fieldOff, descr);
-  for(int i = 0; i < head->nofrecords; i++)
+  for(uint32_t i = 0; i < head->nofrecords; i++)
   {
     index[i] = i;
   }
@@ -4625,7 +4587,7 @@ void funcTest()
   bSortStr(testBuffer, index, nOfInd, fieldOff);
 
   move(1, 0);
-  for(int i = 0; i < 30; i++)
+  for(size_t i = 0; i < 30; i++)
   {
     if(i == fieldOff[0] || i == fieldOff[0]+fieldOff[1])
     {
@@ -4643,7 +4605,7 @@ void funcTest()
   vScroller(testBuffer, 0, 2, 19, nOfInd, index);
   
   nOfInd = extGrFields(config, testBuffer, " 200000.00");
-  for(int i = 0; i < head->nofrecords; i++)
+  for(uint32_t i = 0; i < head->nofrecords; i++)
   {
     index[i] = i;
   }
@@ -4651,7 +4613,7 @@ void funcTest()
   vScroller(testBuffer, 0, 2, 19, nOfInd, index);
 
   nOfInd = extLowFields(config, testBuffer, "  10000.00");
-  for(int i = 0; i < head->nofrecords; i++)
+  for(uint32_t i = 0; i < head->nofrecords; i++)
   {
     index[i] = i;
   }
@@ -4659,7 +4621,7 @@ void funcTest()
   vScroller(testBuffer, 0, 2, 19, nOfInd, index);
   
   nOfInd = extNeqFields(config, testBuffer, "      0.00");
-  for(int i = 0; i < head->nofrecords; i++)
+  for(uint32_t i = 0; i < head->nofrecords; i++)
   {
     index[i] = i;
   }
