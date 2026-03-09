@@ -231,13 +231,18 @@ int makeIndex(char* fieldName, FILE* fPtr, char* iName)
             memcpy(&pageBuffer[entryOffset[i] + 8], &buffer[index[recCount] * iHead->keySize], iHead->keySize);
             recCount += levelOff[currLevel]; 
           }
-        entry->leftPagePointer += PAGESIZE * (currLevel > 0 ? 1 : 0); // it could be faster
-        writeU32LE(&pageBuffer[entryOffset[nOfEntries]], entry->leftPagePointer);
+          //if(recCount < head->nofrecords)
+          //{
+            entry->leftPagePointer += PAGESIZE * (currLevel > 0 ? 1 : 0); // it could be faster
+            writeU32LE(&pageBuffer[entryOffset[nOfEntries]], entry->leftPagePointer);
+          //}
+          //else
+            //writeU32LE(&pageBuffer[entryOffset[nOfEntries]], 0);
 
-        //push the page to the file
-        fwrite(pageBuffer, 1, PAGESIZE, indexPtr);
-        //printMem(pageBuffer, PAGESIZE, 1);
-        //printPage(pageBuffer);
+          //push the page to the file
+          fwrite(pageBuffer, 1, PAGESIZE, indexPtr);
+          //printMem(pageBuffer, PAGESIZE, 1);
+          //printPage(pageBuffer);
         }
       }
       else

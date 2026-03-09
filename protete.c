@@ -601,7 +601,6 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
   buffer[off] = 0x1a;
   
   addRecord(buffer, fName, head[0].record_bytes);
-  makeIndexShort("OPERAC","CTASCTES.DBF","CTASOPE.NTX");
   
 mvprintw(0, 0, "%s %d", buffer, strlen(buffer));
 getch();
@@ -2621,7 +2620,11 @@ refresh();
 
     buffer[off] = 0x1A; //the last byte of buffer should be 0x1A since it is the .dbf EOF marker
     addRecord(buffer, cuentasCtes, 118);
-
+/*
+    makeIndexShort("OPERAC","CTASCTES.DBF","CTASOPE.NTX");
+    makeIndexShort("FECHA","CTASCTES.DBF","CTASFECH.NTX");
+    makeIndexShort("NROCLI","CTASCTES.DBF","CTASCLIE.NTX");
+*/
     rightAlign(cliDeu, cli_descr[16].length);
     rightAlign(cliAcr, cli_descr[17].length);
 
@@ -3972,6 +3975,7 @@ void modStock(void)
   
   int types[] = {CAP, CAP, STRING, STRING, INTEGER, INTEGER, FLOAT, STRING};
   modReg("STOCK1.dbf", types, x + 7, y + 1);
+  makeIndexShort("CODIGO","STOCK1.DBF","STOCOD.NTX");
   menu_principal();
   
   return;
