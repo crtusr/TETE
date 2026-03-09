@@ -213,7 +213,7 @@ int makeIndex(char* fieldName, FILE* fPtr, char* iName)
     int64_t recCount = -1;
     while(recCount < head->nofrecords)
     {
-      uint16_t check = (head->nofrecords - recCount)/levelOff[currLevel];
+      uint16_t check = (head->nofrecords - recCount - 1)/levelOff[currLevel];
       nOfEntries = check > maxPageEntries ? maxPageEntries : check;
       if(nOfEntries)
       {

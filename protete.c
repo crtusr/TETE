@@ -2620,11 +2620,11 @@ refresh();
 
     buffer[off] = 0x1A; //the last byte of buffer should be 0x1A since it is the .dbf EOF marker
     addRecord(buffer, cuentasCtes, 118);
-/*
+
     makeIndexShort("OPERAC","CTASCTES.DBF","CTASOPE.NTX");
     makeIndexShort("FECHA","CTASCTES.DBF","CTASFECH.NTX");
     makeIndexShort("NROCLI","CTASCTES.DBF","CTASCLIE.NTX");
-*/
+
     rightAlign(cliDeu, cli_descr[16].length);
     rightAlign(cliAcr, cli_descr[17].length);
 
