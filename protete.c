@@ -3976,6 +3976,8 @@ void modStock(void)
   int types[] = {CAP, CAP, STRING, STRING, INTEGER, INTEGER, FLOAT, STRING};
   modReg("STOCK1.dbf", types, x + 7, y + 1);
   makeIndexShort("CODIGO","STOCK1.DBF","STOCOD.NTX");
+  system("indexer STOCK1.DBF STOCK1_CODI.INDEX 1 4");
+  system("indexer STOCK1.DBF STOCK1_PROD.INDEX 5 20");
   menu_principal();
   
   return;
