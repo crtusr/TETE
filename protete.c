@@ -2564,7 +2564,7 @@ refresh();
     subFields(cliDeu, cliDeu, cliDeu);
   }
 
-  if(atonum(cliAcr) > atonum(cliDeu))
+  if(atonum(cliAcr) >= atonum(cliDeu))
   {
     subFields(saldo, cliDeu, cliAcr);  
 
@@ -2575,9 +2575,11 @@ refresh();
     mvprintw(13, 51, "           ");
     mvprintw(14, 51, "           ");
     mvprintw(14, 64, "           ");
+    mvprintw(13, 64, "           ");
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
+    mvprintw(14, 64, "%12.2f", 0.0);
     mvprintw(13, 64, "%s", saldo);//It is a string now
   }
   else if(atonum(cliAcr) < atonum(cliDeu))
@@ -2591,10 +2593,12 @@ refresh();
     mvprintw(13, 51, "           ");
     mvprintw(14, 51, "           ");
     mvprintw(14, 64, "           ");
+    mvprintw(13, 64, "           ");
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
-    mvprintw(14, 64, "%s", saldo);//It is a string now
+    mvprintw(14, 64, "%s", saldo);
+    mvprintw(13, 64, "%12.2f", 0.0);
   }
 
 
@@ -2986,6 +2990,8 @@ refresh();
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
+    mvprintw(14, 64, "%12.2f", 0.0);
+    mvprintw(13, 64, "%s", saldo);
   }
   else if(atonum(cliAcr) < atonum(cliDeu))
   {
@@ -3002,6 +3008,7 @@ refresh();
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
     mvprintw(14, 64, "%s", saldo);
+    mvprintw(13, 64, "%12.2f", 0.0);
   }
   //Added Memo functionality
 
@@ -3328,6 +3335,10 @@ mvprintw(0, 0, "indice = %d", indice);
     {
       replaceField(operacion[i].input_buffer, indice, ctasctes_descr[5 + i].fieldname, ctasctes_ptr, ctasctes_head, ctasctes_descr);
     }
+
+    makeIndexShort("ORDCOM","COMPRA.DBF","COMORD.NTX");
+    makeIndexShort("FECHA","COMPRA.DBF","COMFECH.NTX");
+    makeIndexShort("NROPRO","COMPRA.DBF","COMNRO.NTX");
 
     rightAlign(cliDeu, cli_descr[16].length);
     rightAlign(cliAcr, cli_descr[17].length);
@@ -3976,6 +3987,7 @@ void modStock(void)
   int types[] = {CAP, CAP, STRING, STRING, INTEGER, INTEGER, FLOAT, STRING};
   modReg("STOCK1.dbf", types, x + 7, y + 1);
   makeIndexShort("CODIGO","STOCK1.DBF","STOCOD.NTX");
+  makeIndexShort("NOMBRE","STOCK1.DBF","STONOM.NTX");
   system("indexer STOCK1.DBF STOCK1_CODI.INDEX 1 4");
   system("indexer STOCK1.DBF STOCK1_PROD.INDEX 5 20");
   menu_principal();
