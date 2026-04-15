@@ -3,16 +3,6 @@
   #include<stdint.h>
   #include<stdio.h>
 
-  enum RETURN_CODES
-  {
-    SUCCESS = 0,
-    CANNOT_OPEN_FILE = -1,
-    CANNOT_CLOSE_FILE = -2,
-    NO_FIELD = -3,
-    NOT_FOUND = -4,
-    MEM_ISSUES = -255,
-    OTHER = -256
-  };
 
   typedef struct IHeader
   {

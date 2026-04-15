@@ -276,7 +276,7 @@ int get_index(const char* campo, const char* string, FILE* file, header* head, d
 	if (strlen(string) > MAX_FIELD_LENGTH) 
 	{
 	  perror("used more than 254 characters...");
-	  return -3;
+	  return BUFFER_TOO_LONG;
 	}
 
 	int i = 0;
@@ -293,7 +293,7 @@ int get_index(const char* campo, const char* string, FILE* file, header* head, d
 	  i++;
 	  if(descr[i].fieldname[0] == 0x0d)
 	  {
-	    return -2; //No such field
+	    return NO_FIELD; //No such field
 	  }
 	}
 
@@ -335,7 +335,7 @@ int get_index(const char* campo, const char* string, FILE* file, header* head, d
 	}
 	
         if(check == 0) return rindex - 1; //found
-        else return -1; //not found
+        else return NOT_FOUND; //not found
 		
 }
 
@@ -511,7 +511,7 @@ int get_indexes(int* indexes, const char* campo, const char* string, FILE* file,
     may lower the number
   */
   // change to something safer
-  int len = strnlen(string, MAX_FIELD_LENGTH);
+  int len = strnlen(string, MAX_FIELD_LENGTH + 1);
   
 	if (len > MAX_FIELD_LENGTH) 
 	{
@@ -594,7 +594,7 @@ int get_indexes(int* indexes, const char* campo, const char* string, FILE* file,
 	  fseek(file, head[0].record_bytes - (descr[i].length) , SEEK_CUR);
 	  rindex++;
 	}
-        if(indexes[1]) return 0; //found
+        if(indexes[0] != -1) return k; //found
         else return -1; //not found
 		
 }

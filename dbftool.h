@@ -33,6 +33,17 @@
 
 #define MEMOBLOCKSIZE 512
 
+  enum RETURN_CODES
+  {
+    SUCCESS = 0,
+    CANNOT_OPEN_FILE = -1,
+    CANNOT_CLOSE_FILE = -2,
+    NO_FIELD = -3,
+    NOT_FOUND = -4,
+    BUFFER_TOO_LONG = -5, 
+    MEM_ISSUES = -255,
+    OTHER = -256
+  };
 
 typedef struct {
 	uint8_t		dbfversion; 	// 1

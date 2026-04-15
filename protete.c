@@ -220,6 +220,59 @@ static int indexSetUnion(int* index1, int nOfInd1, int* index2, int nOfInd2, int
 }
 
 
+static int replaceSelection(char* id, char* idField ,const char* srcFile, const size_t srcRecNo, char* srcField, const char* destFile, char* destField)
+{
+  int retVal, nOfInd;
+  int indices[FILTER_BUFFER_SIZE];
+  FILE *srcPtr = NULL, *destPtr = NULL;
+  header srcHead[1], destHead[1];
+  descriptor srcDescr[20], destDescr[20];
+  char buffer[255]; 
+  
+  memset(indices, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  srcPtr = fopen(srcFile, "rb");
+  if(srcPtr == NULL)
+  {
+    retVal = -4;
+    goto RSERROR;
+  }
+  store_header_data(srcHead, srcPtr, 0);
+  store_descriptor_data(srcDescr, srcPtr);
+  get_data(buffer, srcRecNo, srcField, srcPtr, srcHead, srcDescr);
+  
+  if(fclose(srcPtr) != 0)
+  {
+    retVal = -5;
+    goto RSERROR;
+  }
+
+  destPtr = fopen(destFile, "r+b");
+  if(srcPtr == NULL)
+  {
+    retVal = -4;
+    goto RSERROR;
+  }
+
+  store_header_data(destHead, destPtr, 0);
+  store_descriptor_data(destDescr, destPtr);
+  
+  nOfInd = get_indexes(indices, idField, id, destPtr, destHead, destDescr);
+  if(nOfInd == -1 || nOfInd == -2 || nOfInd == -3)
+  {
+    retVal = nOfInd;
+    goto RSERROR;
+  }
+
+  for(int i = 0; i < nOfInd; i++)
+  {
+    replaceField(buffer, indices[i], destField, destPtr, destHead, destDescr);
+  }
+
+RSERROR:
+  if(srcPtr != NULL) fclose(srcPtr);
+  if(destPtr != NULL) fclose(destPtr);
+  return retVal;
+}
 //Workaround For retrieving the indexes made by indexer
 static int retrieveIndex(header* head, const char* fName, size_t* index)
 {
@@ -722,6 +775,11 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
     replaceField(field[i].input_buffer, indice, descr[i].fieldname, fPtr, head, descr);
   }
 
+  if(strncmp(fName, "CLIPRO.dbf", 15) == 0)
+  {
+    replaceSelection(field[0].input_buffer, "NROCLI",fName, indice, "RAZON", "CTASCTES.DBF", "DENOMI");
+  }
+
   if (fclose(fPtr) != 0) 
   {
     mvprintw(0, 0, "Error al cerrar el archivo: %s", strerror(errno));
@@ -874,7 +932,7 @@ static int extCoinFields(const SearchConfig* config, char* buffer, const char* t
     }
   }
   err = get_indexes(indices, config->fieldName, toMatch, fPtr, head, descr);
-  if(err)
+  if(err < 0)
   {
     mvprintw(0, 0, "Error: %d", err);
     
@@ -2564,7 +2622,7 @@ refresh();
     subFields(cliDeu, cliDeu, cliDeu);
   }
 
-  if(atonum(cliAcr) >= atonum(cliDeu))
+  if(atonum(cliAcr) > atonum(cliDeu))
   {
     subFields(saldo, cliDeu, cliAcr);  
 
@@ -2579,10 +2637,10 @@ refresh();
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
-    mvprintw(14, 64, "%12.2f", 0.0);
+    //mvprintw(14, 64, "%12.2f", 0.0);
     mvprintw(13, 64, "%s", saldo);//It is a string now
   }
-  else if(atonum(cliAcr) < atonum(cliDeu))
+  else if(atonum(cliAcr) <= atonum(cliDeu))
   {
     subFields(saldo, cliAcr, cliDeu);
   
@@ -2598,7 +2656,7 @@ refresh();
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
     mvprintw(14, 64, "%s", saldo);
-    mvprintw(13, 64, "%12.2f", 0.0);
+    //mvprintw(13, 64, "%12.2f", 0.0);
   }
 
 
@@ -2984,13 +3042,14 @@ refresh();
     rightAlign(cliAcr, pro_descr[13].length);
     rightAlign(saldo, pro_descr[12].length);
 
-    mvprintw(13, 51, "           ");
-    mvprintw(14, 51, "           ");
-    mvprintw(14, 64, "           ");
+    mvprintw(13, 51, "            ");
+    mvprintw(14, 51, "            ");
+    mvprintw(14, 64, "            ");
+    mvprintw(13, 64, "            ");
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
-    mvprintw(14, 64, "%12.2f", 0.0);
+    //mvprintw(14, 64, "%12.2f", 0.0);
     mvprintw(13, 64, "%s", saldo);
   }
   else if(atonum(cliAcr) < atonum(cliDeu))
@@ -3001,14 +3060,15 @@ refresh();
     rightAlign(cliAcr, pro_descr[13].length);
     rightAlign(saldo, pro_descr[12].length);
 
-    mvprintw(13, 51, "           ");
-    mvprintw(14, 51, "           ");
-    mvprintw(14, 64, "           ");
+    mvprintw(13, 51, "            ");
+    mvprintw(14, 51, "            ");
+    mvprintw(14, 64, "            ");
+    mvprintw(13, 64, "            ");
   
     mvprintw(13, 51, "%s", cliAcr);
     mvprintw(14, 51, "%s", cliDeu);
     mvprintw(14, 64, "%s", saldo);
-    mvprintw(13, 64, "%12.2f", 0.0);
+    //mvprintw(13, 64, "%12.2f", 0.0);
   }
   //Added Memo functionality
 
