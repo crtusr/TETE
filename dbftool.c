@@ -904,7 +904,6 @@ int get_data(char* buffer, int indice, char* campo, FILE* file, header* head, de
 	//avanzo en los registros en (tamaño en bytes del registro) * el indice obtenido 
 	
 	fseek(file, head[0].record_bytes * indice , SEEK_CUR);
-
 	fread(buffer, descr[i].length, 1, file);
 
 	return 0;
@@ -956,6 +955,7 @@ int get_bulk_data(char* buffer, int* indices, char* campo, FILE* file, header* h
 	return 0;
 }
 */
+
 int get_record(char* buffer, int indice, FILE* file, header* head, descriptor* descr)
 {
 	if (indice == -1) 
@@ -964,18 +964,14 @@ int get_record(char* buffer, int indice, FILE* file, header* head, descriptor* d
 		return -1;
 	}
 	
-	//buffer[MAX_FIELD_LENGTH];
-
 	fseek(file, head[0].header_bytes, SEEK_SET);
 
 	//avanzo en los registros en (tamaño en bytes del registro) * el indice obtenido 
 	
 	fseek(file, head[0].record_bytes * indice , SEEK_CUR);
-
 	fread(buffer, head[0].record_bytes, 1, file);
 
 	return 0;
-	
 }
 
 int decodeMemoStr(char* buffer)
@@ -1531,7 +1527,18 @@ int replaceMemo(const char* fileName, char* buffer, int block)
   }
   return 0;
 }
+/*
+int pack(char *fName)
+{
+  DBFile *src;
+  descriptor s[255];
+  DBFile *dest;
+  descriptor d[255];
+   OpenDBaseFile(file, fName, rb);
 
+  return 0;
+}
+*/
 // This is risky but i will make a function to memoize the whole file
 
 void extractAll(FILE* fPtr, header* head, descriptor* descr, char* record)
@@ -1551,3 +1558,17 @@ void extractAll(FILE* fPtr, header* head, descriptor* descr, char* record)
   return;
 }
 
+/* Wrappers */
+
+int OpenDBaseFile(DBFile *dbf, const char* fName, const char* mode)
+{
+  int nOfInd;
+  dbf->fPtr = fopen(fName, mode);
+  if(dbf->fPtr == NULL)
+  {
+    return CANNOT_OPEN_FILE;
+  }
+  nOfInd = store_header_data(dbf->head, dbf->fPtr, 0);
+  store_descriptor_data(dbf->descr, dbf->fPtr);
+  return nOfInd;
+}

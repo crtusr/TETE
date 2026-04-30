@@ -222,7 +222,7 @@ static int indexSetUnion(int* index1, int nOfInd1, int* index2, int nOfInd2, int
 
 static int replaceSelection(char* id, char* idField ,const char* srcFile, const size_t srcRecNo, char* srcField, const char* destFile, char* destField)
 {
-  int retVal, nOfInd;
+  int retVal = 0, nOfInd;
   int indices[FILTER_BUFFER_SIZE];
   FILE *srcPtr = NULL, *destPtr = NULL;
   header srcHead[1], destHead[1];
@@ -1998,6 +1998,8 @@ void ultimas_op_cli(void)
   free(dbfData);
   return;
 }
+
+
 //this was the old version of the function
 
 /*
@@ -2188,6 +2190,137 @@ refresh();
 */
 
 
+static void opsPorFecha(const char *fName, SearchFields *campos, int *camposSize, int nFechas)
+{
+  const int indexAlloc = 50;
+  DBFile ops[1];
+  descriptor descr[25];
+  ops->descr = descr;
+  InputField fecha[2];
+  //FILE *fPtr;
+  int indices[indexAlloc];
+  int nOfInd;
+  char *buffer = NULL;
+
+  if(nFechas != 1 && nFechas != 2)
+    return;
+
+  OpenDBaseFile(ops, fName, "rb");
+  if(ops->fPtr == NULL)
+  {
+    mvprintw(0,0, "Error abriendo %s: %s", fName, strerror);
+    getch();
+    return;
+  }
+  if(nFechas == 1)
+    init_input_field(&fecha[0], "Fecha: ", 8, false, 10, 10, DATE);
+  else
+  {
+    init_input_field(&fecha[0], "Desde: ", 8, false, 10, 10, DATE);
+    init_input_field(&fecha[1], "Hasta: ", 8, false, 10, 11, DATE);
+  }
+  clear();
+  input_fields_loop(fecha, nFechas, NULL);
+  for(int i = 0; i < nFechas; i++)
+    dateFormatter(fecha[i].input_buffer);
+
+  buffer = malloc(ops->head->header_bytes * indexAlloc);
+  if(buffer == NULL)
+  {
+    mvprintw(0,0,"error Alojando memoria");
+    getch();
+    return;
+  }
+  
+  char tableNames[][8] = 
+  {
+    {"OP"},
+    {"FECHA"},
+    {"FACTURA"},
+    {"TRAJO"},
+    {"LLEVO"},
+    {"CHE_ENT"},
+    {"EFE_ENT"},
+    {"CHE_REC"},
+    {"EFE_REC"}
+  };
+
+  SearchConfig config[1] = 
+  {
+    INIT_SEARCH_CONFIG(
+                        .fName = fName,
+												.nOfFields = 9,
+												.fields = campos,
+												.fieldName = "FECHA",
+												.extraSpace = 0
+                      )
+  };
+  
+  if(nFechas == 1)
+    nOfInd = extCoinFields(config, buffer, fecha[0].input_buffer);
+  else
+    nOfInd = extBetwFields(config, buffer, fecha[0].input_buffer, fecha[1].input_buffer);
+  
+  for(int i = 0; i < nOfInd; i++)
+  {
+    indices[i] = i;
+  }
+  move(2,0);
+  for(int i = 0; i < 9; i++)
+  {
+    printw("%*.*s", camposSize[i] + 1, camposSize[i] + 1, tableNames[i]);
+  }
+
+  vScroller(buffer, 0, 3, 20, nOfInd, indices);
+  if(fclose(ops->fPtr) != 0)
+  {
+    mvprintw(0, 0, "Error al cerrar %s", fName);
+    getch();
+    return;
+  }
+  free(fecha[0].prompt);
+  free(buffer);
+  return;
+}
+
+void opsPorFechaCli(void)
+{
+  SearchFields campos[] = 
+  {
+    {"OPERAC", YEAR_OFF},
+    {"FECHA", YEAR_OFF},
+    {"FACTUR", YEAR_OFF},
+    {"ACREE", YEAR_OFF},
+    {"DEUDO", YEAR_OFF},
+    {"ECHEQ", YEAR_OFF},
+    {"EEFEC", YEAR_OFF},
+    {"RCHEQ", YEAR_OFF},
+    {"REFEC", YEAR_OFF}
+  };
+  int camposSize[] = {3 , 5, 13, 10, 10, 10, 10, 10, 10}; //size of the fields but the first one is minus 1
+  opsPorFecha("CTASCTES.DBF", campos, camposSize, 1);
+  return;
+}
+
+void opsEntreFechasCli(void)
+{
+  SearchFields campos[] = 
+  {
+    {"OPERAC", YEAR_OFF},
+    {"FECHA", YEAR_OFF},
+    {"FACTUR", YEAR_OFF},
+    {"ACREE", YEAR_OFF},
+    {"DEUDO", YEAR_OFF},
+    {"ECHEQ", YEAR_OFF},
+    {"EEFEC", YEAR_OFF},
+    {"RCHEQ", YEAR_OFF},
+    {"REFEC", YEAR_OFF}
+  };
+  int camposSize[] = {3 , 5, 13, 10, 10, 10, 10, 10, 10}; //size of the fields but the first one is minus 1
+  opsPorFecha("CTASCTES.DBF", campos, camposSize, 2);
+  return;
+}
+
 void opsComPorImpresora(void)
 {
   const int indexAlloc = 500;
@@ -2254,6 +2387,44 @@ void opsComPorImpresora(void)
   }
   free(entrada[0].prompt);
   free(dbfData);
+  return;
+}
+
+void opsPorFechaProv(void)
+{
+  SearchFields campos[] = 
+  {
+    {"ORDCOM", YEAR_OFF},
+    {"FECHA", YEAR_OFF},
+    {"NROFAC", YEAR_OFF},
+    {"PACREE", YEAR_OFF},
+    {"PDEUDO", YEAR_OFF},
+    {"VECHEQ", YEAR_OFF},
+    {"VEEFEC", YEAR_OFF},
+    {"VRCHEQ", YEAR_OFF},
+    {"VREFEC", YEAR_OFF}
+  };
+  int camposSize[] = {5 , 5, 13, 10, 10, 10, 10, 10, 10}; //size of the fields but the first one is minus 1
+  opsPorFecha("COMPRA.DBF", campos, camposSize, 1);
+  return;
+}
+
+void opsEntreFechasProv(void)
+{
+  SearchFields campos[] = 
+  {
+    {"ORDCOM", YEAR_OFF},
+    {"FECHA", YEAR_OFF},
+    {"NROFAC", YEAR_OFF},
+    {"PACREE", YEAR_OFF},
+    {"PDEUDO", YEAR_OFF},
+    {"VECHEQ", YEAR_OFF},
+    {"VEEFEC", YEAR_OFF},
+    {"VRCHEQ", YEAR_OFF},
+    {"VREFEC", YEAR_OFF}
+  };
+  int camposSize[] = {5 , 5, 13, 10, 10, 10, 10, 10, 10}; //size of the fields but the first one is minus 1
+  opsPorFecha("COMPRA.DBF", campos, camposSize, 2);
   return;
 }
 

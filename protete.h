@@ -45,7 +45,7 @@ static int extBetwFields( Searchconfig* config
 */
 typedef struct 
 {
-  const char fName[16];  
+  const char *fName;  
   const size_t nOfFields; 
   SearchFields* fields;
   const char* fieldName;
@@ -91,5 +91,9 @@ void consCheque();
 void chequesNoEntregados();
 void deudores();
 void funcTest();
+void opsPorFechaCli();
+void opsPorFechaProv();
+void opsEntreFechasCli();
+void opsEntreFechasProv();
 
 #endif

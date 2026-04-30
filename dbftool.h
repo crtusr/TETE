@@ -72,6 +72,12 @@ typedef struct {
 	uint8_t 	index_flag;
 } descriptor;
 
+typedef struct DBFile
+{
+  FILE *fPtr;
+  header head[1];
+  descriptor *descr;
+} DBFile;
 
 size_t store_header_data(header *head, FILE* file, int i);
 void store_descriptor_data(descriptor *fields, FILE *file);
@@ -96,6 +102,7 @@ int addDecimals(char *string, const size_t size, const size_t decimals);
 int addRecord(char* buffer, const char* fname, size_t size);
 int addMemo(const char* fileName, char* buffer);
 int replaceMemo(const char* fileName, char* buffer, int blockNum);
+int OpenDBaseFile(DBFile *dbf, const char* fName, const char* mode);
 
 #endif
 

@@ -17,13 +17,13 @@ int main()
 	MenuItem ConsProv_menu[] = 
   {
 	  {"OPERACION INDIVIDUAL (por numero de operacion)", NULL, consulta_compra, 	1, y, x, 0, 0, NULL , consultas_op},
-    {"LISTADO POR IMPRESORA (por cliente)",            NULL, opsComPorImpresora, 			        2, y + 2, x, 0, 1, NULL , NULL},
+    {"LISTADO POR IMPRESORA (por cliente)",            NULL, opsComPorImpresora,2, y + 2, x, 0, 1, NULL , NULL},
 	  {"Menu anterior",                                  NULL, operaciones, 			3, y + 4, x, 0, 2, NULL , NULL},
 	  {"BALANCE DE DEUDAS",                              NULL, NULL, 					    4, y + 6, x, 0, 3, NULL , NULL},
 	  {"RESUMEN DE FACTURACION MES A MES",               NULL, NULL, 			        5, y + 8, x, 0, 4, NULL , NULL},
-	  {"OPERACIONES POR FECHA",                          NULL, NULL, 					    6, y + 10, x, 0, 5, NULL , NULL},
-	  {"OPERACIONES ENTRE DOS FECHAS",                   NULL, NULL, 				      7, y + 12, x, 0, 6, NULL , NULL},
-	  {"ULTIMAS 23 OPERACIONES (por poveedor)",          NULL, ultimasOpCom, 	  8, y + 14, x, 0, 7, NULL , NULL},
+	  {"OPERACIONES POR FECHA",                          NULL, opsPorFechaProv, 	6, y + 10, x, 0, 5, NULL , NULL},
+	  {"OPERACIONES ENTRE DOS FECHAS",                   NULL, opsEntreFechasProv,7, y + 12, x, 0, 6, NULL , NULL},
+    {"ULTIMAS 23 OPERACIONES (por poveedor)",          NULL, ultimasOpCom, 	    8, y + 14, x, 0, 7, NULL , NULL},
     {NULL, NULL, NULL, 			0, 0, 0, 0, 0, NULL , NULL}
 	};
 
@@ -33,8 +33,8 @@ int main()
 	  {"Menu anterior",                                  NULL, operaciones, 				3, y + 4, x, 0, 2, NULL , NULL},
 	  {"BALANCE DE DEUDAS",                              NULL, NULL,                4, y + 6, x, 0, 3, NULL , NULL},
 	  {"RESUMEN DE FACTURACION MES A MES",               NULL, NULL, 			          5, y + 8, x, 0, 4, NULL , NULL},
-	  {"OPERACIONES POR FECHA",                          NULL, NULL, 					      6, y + 10, x, 0, 5, NULL , NULL},
-	  {"OPERACIONES ENTRE DOS FECHAS",                   NULL, NULL, 				        7, y + 12, x, 0, 6, NULL , NULL},
+	  {"OPERACIONES POR FECHA",                          NULL, opsPorFechaCli, 					      6, y + 10, x, 0, 5, NULL , NULL},
+	  {"OPERACIONES ENTRE DOS FECHAS",                   NULL, opsEntreFechasCli, 				        7, y + 12, x, 0, 6, NULL , NULL},
 	  {"ULTIMAS 23 OPERACIONES (por cliente)",           NULL, ultimas_op_cli, 		  8, y + 14, x, 0, 7, NULL , NULL},
     {NULL, NULL, NULL, 							0, 0, 0, 0, 0, NULL , NULL}
 	};
