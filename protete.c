@@ -257,7 +257,7 @@ static int replaceSelection(char* id, char* idField ,const char* srcFile, const 
   store_descriptor_data(destDescr, destPtr);
   
   nOfInd = get_indexes(indices, idField, id, destPtr, destHead, destDescr);
-  if(nOfInd == -1 || nOfInd == -2 || nOfInd == -3)
+  if(nOfInd < 0)
   {
     retVal = nOfInd;
     goto RSERROR;
@@ -488,8 +488,7 @@ static void pRecord(const char* arch, const char* iField, const int xPos, const 
     rightAlign(code, descr[0].length);
     
     indice = get_index(descr[0].fieldname, code, fPtr, head, descr);
-    
-    if(indice ==  -1)
+    if(indice < 0)
     {
       mvprintw(0, 0, "Registro no encontrado, error: %d ", indice);
       getch();
@@ -499,8 +498,7 @@ static void pRecord(const char* arch, const char* iField, const int xPos, const 
   else
   {
     indice = get_index(descr[0].fieldname, iField, fPtr, head, descr);
-    
-    if(indice ==  -1)
+    if(indice < 0)
     {
       mvprintw(0, 0, "Registro no encontrado, error: %d ", indice);
       getch();
@@ -837,12 +835,12 @@ static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
   size_t saldoSize = fieldSizes[2] + 1;
   rightAlign(zero, fieldSizes[2]);
   nOfIndAcr = get_indexes_neq(indicesAcr, fields[2].fieldName, zero, fPtr, head, descr);
-  if(nOfIndAcr == -1 || nOfIndAcr == -2)
+  if(nOfIndAcr < 0)
   {
     mvprintw(0, 0, "Error: %d", nOfIndAcr);
   }
   nOfIndDeu = get_indexes_neq(indicesDeu, fields[3].fieldName, zero, fPtr, head, descr);
-  if(nOfIndDeu == -1 || nOfIndDeu == -2)
+  if(nOfIndDeu < 0)
   {
     mvprintw(0, 0, "Error: %d", nOfIndDeu);
   }
@@ -1545,7 +1543,7 @@ void consulta_operacion(void){
   rightAlign(entrada[0].input_buffer, ctasctes_descr[0].length);
 
   indice = get_index("OPERAC", entrada[0].input_buffer, ctasctes_ptr, ctasctes_head, ctasctes_descr);
-  if(indice ==  -1)
+  if(indice < 0)
   {
     mvprintw(0, 0, "not found");
     return;
@@ -1666,7 +1664,7 @@ if (compras_ptr == NULL)
 
   indice = get_index("ORDCOM", entrada[0].input_buffer, compras_ptr, compras_head, compras_descr);
 
-  if(indice ==  -1)
+  if(indice < 0)
   {
     mvprintw(0, 0, "Registro no encontrado"); 
     getch();
@@ -2672,7 +2670,7 @@ void agregarCtacte(void)
   rightAlign(cabecera[3].input_buffer, ctasctes_descr[3].length);
 
   cliente = get_index(cli_descr[0].fieldname, cabecera[3].input_buffer, cli_ptr, cli_head, cli_descr);
-  if(cliente ==  -1)
+  if(cliente < NOT_FOUND)
   {
     mvprintw(0, 0, "No hay cliente registrado con ese nombre");
     getch();
@@ -3053,7 +3051,7 @@ for(int i = 0; i < 10; i++)
   rightAlign(provid, pro_descr[0].length);
 
   proveedor = get_index(pro_descr[0].fieldname, provid, pro_ptr, pro_head, pro_descr);
-  if(proveedor ==  -1)
+  if(proveedor ==  NOT_FOUND)
   {
     mvprintw(0, 0, "No hay proveedor registrado con ese nombre");
     getch();
@@ -3352,7 +3350,7 @@ void modCtacte(void)
 
   indice = get_index("OPERAC", entrada[0].input_buffer, ctasctes_ptr, ctasctes_head, ctasctes_descr);
 mvprintw(0, 0, "indice = %d", indice);
-  if(indice ==  -1)
+  if(indice ==  NOT_FOUND)
   {
     mvprintw(0, 0, "not found");
     return;
@@ -3401,7 +3399,7 @@ mvprintw(0, 0, "indice = %d", indice);
   rightAlign(buffer, ctasctes_descr[3].length);
 
   cliente = get_index(cli_descr[0].fieldname, buffer, cli_ptr, cli_head, cli_descr);
-  if(cliente ==  -1)
+  if(cliente ==  NOT_FOUND)
   {
     mvprintw(0, 0, "No hay cliente registrado con ese nombre");
     getch();
@@ -3653,7 +3651,7 @@ void modCom(void)
   rightAlign(entrada[0].input_buffer, compra_descr[0].length);
 
   indice = get_index("ORDCOM", entrada[0].input_buffer, compra_ptr, compra_head, compra_descr);
-  if(indice ==  -1)
+  if(indice < 0)
   {
     mvprintw(0, 0, "Registro no encontrado");
     getch();
@@ -3702,7 +3700,7 @@ void modCom(void)
   rightAlign(buffer, pro_descr[0].length);
 
   Proveedor = get_index(pro_descr[0].fieldname, buffer, pro_ptr, pro_head, pro_descr);
-  if(Proveedor ==  -1)
+  if(Proveedor ==  NOT_FOUND)
   {
     mvprintw(0, 0, "No hay Proveedor registrado con ese nombre");
     getch();
