@@ -82,7 +82,7 @@ typedef struct DBFile
 size_t store_header_data(header *head, FILE* file, int i);
 void store_descriptor_data(descriptor *fields, FILE *file);
 int isDeleted(int recNo, DBFile *file);
-int deleteRec(int recNo, DBFile *file);
+int setDeleted(int recNo, DBFile *file, char del);
 int get_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);
 int get_incomplete_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);
 int get_indexes(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);

@@ -39,21 +39,26 @@ int isDeleted(int recNo, DBFile *file)
   /*
    * This assumes recNo index number is 0 based
    */
-  if(recNo > file->head->nofrecords)
+  if(recNo >= file->head->nofrecords)
     return NOT_FOUND;
   char del;
   fseek(file->fPtr, file->head->header_bytes, SEEK_SET);
   fseek(file->fPtr, recNo * file->head->record_bytes, SEEK_CUR);
   fread(&del, sizeof(char), 1, file->fPtr);
-  if(del)
+  if(del == '*')
     return 1;
   else
     return 0;
 }
 
-int deleteRec(int recNo, DBFile *file)
+int setDeleted(int recNo, DBFile *file, char del)
 {
-  return 0;
+  /* This MARKS the record as deleted with an asterisk '*' or 0x2A */
+  if(recNo >= file->head->nofrecords)
+    return NOT_FOUND;
+  fseek(file->fPtr, file->head->header_bytes, SEEK_SET);
+  fseek(file->fPtr, recNo * file->head->record_bytes, SEEK_CUR);
+  return fwrite(&del, sizeof(char), 1, file->fPtr);
 }
 
 //All formatting functions should be at the top of the file
