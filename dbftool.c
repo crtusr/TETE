@@ -34,6 +34,28 @@
 #define TERMINATOR 0x0D
 #define MAX_FIELD_LENGTH 254
 
+int isDeleted(int recNo, DBFile *file)
+{
+  /*
+   * This assumes recNo index number is 0 based
+   */
+  if(recNo > file->head->nofrecords)
+    return NOT_FOUND;
+  char del;
+  fseek(file->fPtr, file->head->header_bytes, SEEK_SET);
+  fseek(file->fPtr, recNo * file->head->record_bytes, SEEK_CUR);
+  fread(&del, sizeof(char), 1, file->fPtr);
+  if(del)
+    return 1;
+  else
+    return 0;
+}
+
+int deleteRec(int recNo, DBFile *file)
+{
+  return 0;
+}
+
 //All formatting functions should be at the top of the file
 
 void spaceFill(char *string, size_t size)
@@ -1527,18 +1549,80 @@ int replaceMemo(const char* fileName, char* buffer, int block)
   }
   return 0;
 }
-/*
-int pack(char *fName)
-{
-  DBFile *src;
-  descriptor s[255];
-  DBFile *dest;
-  descriptor d[255];
-   OpenDBaseFile(file, fName, rb);
 
-  return 0;
+/* This removes all record marked for deletion*/
+int pack(const char *fName)
+{
+  int retVal;
+  DBFile src[1];
+  descriptor s[255];
+  FILE *dest = NULL;
+  header destHead[1];
+  unsigned int oldCount = 0;
+  unsigned char *buffer = NULL;
+  src->fPtr = NULL;
+  src->descr = s;
+  retVal = OpenDBaseFile(src, fName, "rb");
+  if(retVal < 0) 
+    goto packErr;
+
+  dest = fopen("TEMP.DBF", "wb");
+  if(dest == NULL)
+  {
+    retVal = CANNOT_OPEN_FILE;
+    goto packErr;
+  }
+
+  memcpy(destHead, src->head, 32);
+
+  buffer = malloc(0xFFFF);
+  if(buffer == NULL)
+  {
+    retVal = MEM_ISSUES;
+    goto packErr;
+  }
+  
+  fseek(src->fPtr, 0, SEEK_SET);
+
+  fread(buffer, src->head->header_bytes, 1, src->fPtr);
+  fwrite(buffer, src->head->header_bytes, 1, dest);
+
+  while(oldCount < src->head->nofrecords)
+  {
+    fread(buffer, src->head->record_bytes, 1, src->fPtr);
+    if(buffer[0] == 0x20)
+    {
+      fwrite(buffer, src->head->record_bytes, 1, dest);
+    }
+    else
+      destHead->nofrecords--;
+    oldCount++;
+  }
+
+  fwrite("\x1A", 1, 1, dest);
+
+  fseek(dest, 0, SEEK_SET);
+  fwrite(destHead, 32, 1, dest);
+  
+  if(fclose(src->fPtr) != 0 || fclose(dest) != 0)
+  {
+    retVal = CANNOT_CLOSE_FILE;
+    goto packErr;
+  }
+
+  remove(fName);
+  rename("TEMP.DBF", fName);
+  
+  retVal = SUCCESS;
+
+packErr:
+  if(buffer != NULL) free(buffer);
+  if(dest) fclose(dest);
+  if(src->fPtr) fclose(src->fPtr);
+
+  return retVal;
 }
-*/
+
 // This is risky but i will make a function to memoize the whole file
 
 void extractAll(FILE* fPtr, header* head, descriptor* descr, char* record)

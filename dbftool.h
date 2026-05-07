@@ -81,6 +81,8 @@ typedef struct DBFile
 
 size_t store_header_data(header *head, FILE* file, int i);
 void store_descriptor_data(descriptor *fields, FILE *file);
+int isDeleted(int recNo, DBFile *file);
+int deleteRec(int recNo, DBFile *file);
 int get_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);
 int get_incomplete_index(const char* campo,const char* string, FILE* file, header* head, descriptor* descr);
 int get_indexes(int* indexes, const char* campo, const char* string, FILE* file, header* head, descriptor* descr);
@@ -102,6 +104,7 @@ int addDecimals(char *string, const size_t size, const size_t decimals);
 int addRecord(char* buffer, const char* fname, size_t size);
 int addMemo(const char* fileName, char* buffer);
 int replaceMemo(const char* fileName, char* buffer, int blockNum);
+int pack(const char *fName);
 int OpenDBaseFile(DBFile *dbf, const char* fName, const char* mode);
 
 #endif
