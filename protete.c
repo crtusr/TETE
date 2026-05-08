@@ -1774,8 +1774,8 @@ void saldoEnOperaciones(char* operaciones, descriptor* descr, size_t nOfInd)
   size_t offsetDinero = 0;
   for(int i = 0; i < 25 && descr[i].fieldname[0] != TERMINATOR; i++)
   {
-    compClientes = !strncmp(descr[i].fieldname, clientes, strnlen(clientes, 11));
-    compProveedores = !strncmp(descr[i].fieldname, proveedores, strnlen(proveedores, 11));
+    compClientes = !strncmp(descr[i].fieldname, clientes, sizeof(clientes) - 1);
+    compProveedores = !strncmp(descr[i].fieldname, proveedores, sizeof(proveedores) - 1);
     if(compClientes)
     {
       offsetDinero = i;
