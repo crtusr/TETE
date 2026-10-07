@@ -7,7 +7,7 @@
 #define PRO_MAX_LENGTH 30
 #define STOCK_MAX_LENGTH 30
 #define CHEC_MAX_LENGTH 20
-#define FILTER_BUFFER_SIZE 255
+#define FILTER_BUFFER_SIZE 4000
 
 #define OPERAC ctasctes_descr[0].length
 #define FECHA ctasctes_descr[1].length
@@ -89,11 +89,15 @@ void grupoPorProv();
 void agregarCheque();
 void consCheque();
 void chequesNoEntregados();
+void chequesEnFecha();
 void deudores();
 void funcTest();
+void balanceCli();
 void opsPorFechaCli();
 void opsPorFechaProv();
 void opsEntreFechasCli();
 void opsEntreFechasProv();
+void balancePro();
+void balanceCliNew();
 
 #endif

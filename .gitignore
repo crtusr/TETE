@@ -9,6 +9,12 @@
 *.exe
 *.un~
 *.DBF.bak
+*.o
+*.d
+MKBK/
+-p/
+obj_debug/
+obj_release/
 BK/
 DEPRECATED/
 HxD/

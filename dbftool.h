@@ -105,6 +105,7 @@ int addRecord(char* buffer, const char* fname, size_t size);
 int addMemo(const char* fileName, char* buffer);
 int replaceMemo(const char* fileName, char* buffer, int blockNum);
 int pack(const char *fName);
+size_t findField(char* fieldName, descriptor* descr, size_t nOfDescr);
 int OpenDBaseFile(DBFile *dbf, const char* fName, const char* mode);
 
 #endif

@@ -9,6 +9,7 @@ void draw_background_submenu(int x, int y, int width, int height);
 
 void menprov();
 
+void ordCom();
 void operaciones();
 
 void consultas_op();

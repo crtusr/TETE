@@ -99,7 +99,8 @@ printw( "\n"
 
 }
 
-void operaciones() {
+void operaciones() 
+{
 	
 	clear();
 
@@ -107,13 +108,13 @@ printw( "\n"
 	"   +------------------------------------------------------------------------+\n"
 	"   | operacion :[      ]    fecha:[        ]  factura nro.:[             ]  |\n"
 	"   +------------------------------------------------------------------------|\n"
-	"   |nro.cliente  :[   ]                 nombre:[                         ]  |\n");
+	"   |nro.cliente:[    ]                  nombre:[                         ]  |\n");
 printw( "   |direccion:[                         ] localidad:[                    ]  |\n"
 	"   |cpostal:[    ]           telefono1:[         ]  telefono2:[          ]  |\n"
 	"   +------------------------------------------------------------------------|\n"
 	"   |DETALLE:                          |      S A L D O   P A R C I A L      |\n");
-printw( "   |                                  |credito [              ]             |\n"
-	"   |                                  |factura$[              ]             |\n"
+printw( "   |                                  |Credito [              ]             |\n"
+	"   |                                  |Factura$[              ]             |\n"
 	"   |                                  +-------------------------------------|\n"
 	"   |                                  |      S A L D O    G E N E R A L     |\n");
 printw( "   |                                  |acreedor[         ]                  |\n"
@@ -129,6 +130,39 @@ printw( "+------------------Registro de Cuentas Corrientes ******* menu de opcio
 	"+-----------------------------------------------------------------------------+\n"
 	"          registro de deuda en cta cte\n");
 
+
+}
+
+void ordCom()
+{
+
+	clear();
+
+printw( "\n"
+	"   +------------------------------------------------------------------------+\n"
+	"   |    OrdCom :[      ]    fecha:[        ]  factura nro.:[             ]  |\n"
+	"   +------------------------------------------------------------------------|\n"
+	"   |nro.proveed:[    ]                  nombre:[                         ]  |\n");
+printw( "   |direccion:[                         ] localidad:[                    ]  |\n"
+	"   |cpostal:[    ]           telefono1:[         ]  telefono2:[          ]  |\n"
+	"   +------------------------------------------------------------------------|\n"
+	"   |DETALLE:                          |      S A L D O   P A R C I A L      |\n");
+printw( "   |                                  |Acreedor[              ]             |\n"
+	"   |                                  |Deudor  [              ]             |\n"
+	"   |                                  +-------------------------------------|\n"
+	"   |                                  |      S A L D O    G E N E R A L     |\n");
+printw( "   |                                  |acreedor[         ]                  |\n"
+	"   |                                  |deudor  [         ]                  |\n"
+	"   +----------------------------------+-------------------------------------|\n"
+	"   |           VALORES ENTREGADOS     |           VALORES RECIBIDOS         |\n");
+printw( "   |cheque[         ] efec.[         ]|cheque[         ] efectivo[         ]|\n"
+	"   +------------------------------------------------------------------------+\n"
+	"\n"
+	"\n");
+printw( "+------------------Registro de Cuentas Corrientes ******* menu de opciones****+\n"
+	"|                                                                             |\n"
+	"+-----------------------------------------------------------------------------+\n"
+	"          registro de deuda en cta cte\n");
 }
 
 void consultas_op() {

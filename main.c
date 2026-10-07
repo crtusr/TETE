@@ -16,25 +16,26 @@ int main()
   x = 20;
 	MenuItem ConsProv_menu[] = 
   {
-	  {"OPERACION INDIVIDUAL (por numero de operacion)", NULL, consulta_compra, 	1, y, x, 0, 0, NULL , consultas_op},
+    {"OPERACION INDIVIDUAL (por numero de operacion)", NULL, consulta_compra, 	1, y, x, 0, 0, NULL , consultas_op},
     {"LISTADO POR IMPRESORA (por cliente)",            NULL, opsComPorImpresora,2, y + 2, x, 0, 1, NULL , NULL},
-	  {"Menu anterior",                                  NULL, operaciones, 			3, y + 4, x, 0, 2, NULL , NULL},
-	  {"BALANCE DE DEUDAS",                              NULL, NULL, 					    4, y + 6, x, 0, 3, NULL , NULL},
-	  {"RESUMEN DE FACTURACION MES A MES",               NULL, NULL, 			        5, y + 8, x, 0, 4, NULL , NULL},
-	  {"OPERACIONES POR FECHA",                          NULL, opsPorFechaProv, 	6, y + 10, x, 0, 5, NULL , NULL},
-	  {"OPERACIONES ENTRE DOS FECHAS",                   NULL, opsEntreFechasProv,7, y + 12, x, 0, 6, NULL , NULL},
+    {"Menu anterior",                                  NULL, operaciones, 			3, y + 4, x, 0, 2, NULL , NULL},
+    {"BALANCE DE COMPRAS",                             NULL, balancePro, 			  4, y + 6, x, 0, 3, NULL , NULL},
+    {"RESUMEN DE COMPRAS MES A MES",                   NULL, NULL, 			        5, y + 8, x, 0, 4, NULL , NULL},
+    {"OPERACIONES POR FECHA",                          NULL, opsPorFechaProv, 	6, y + 10, x, 0, 5, NULL , NULL},
+    {"OPERACIONES ENTRE DOS FECHAS",                   NULL, opsEntreFechasProv,7, y + 12, x, 0, 6, NULL , NULL},
     {"ULTIMAS 23 OPERACIONES (por poveedor)",          NULL, ultimasOpCom, 	    8, y + 14, x, 0, 7, NULL , NULL},
     {NULL, NULL, NULL, 			0, 0, 0, 0, 0, NULL , NULL}
-	};
+  };
 
-	MenuItem ConsCli_menu[] = {
-	  {"OPERACION INDIVIDUAL (por numero de operacion)", NULL, consulta_operacion,  1, y, x, 0, 0, NULL , consultas_op},
-    {"LISTADO POR IMPRESORA (por cliente)",            NULL, opsCliPorImpresora, 			          2, y + 2, x, 0, 1, NULL , NULL},
-	  {"Menu anterior",                                  NULL, operaciones, 				3, y + 4, x, 0, 2, NULL , NULL},
-	  {"BALANCE DE DEUDAS",                              NULL, NULL,                4, y + 6, x, 0, 3, NULL , NULL},
-	  {"RESUMEN DE FACTURACION MES A MES",               NULL, NULL, 			          5, y + 8, x, 0, 4, NULL , NULL},
-	  {"OPERACIONES POR FECHA",                          NULL, opsPorFechaCli, 					      6, y + 10, x, 0, 5, NULL , NULL},
-	  {"OPERACIONES ENTRE DOS FECHAS",                   NULL, opsEntreFechasCli, 				        7, y + 12, x, 0, 6, NULL , NULL},
+	MenuItem ConsCli_menu[] = 
+  {
+	  {"OPERACION INDIVIDUAL (por numero de operacion)", NULL, consulta_operacion,  1, y     , x, 0, 0, NULL , consultas_op},
+    {"LISTADO POR IMPRESORA (por cliente)",            NULL, opsCliPorImpresora,  2, y + 2 , x, 0, 1, NULL , NULL},
+	  {"Menu anterior",                                  NULL, operaciones, 				3, y + 4 , x, 0, 2, NULL , NULL},
+	  {"BALANCE DE DEUDAS",                              NULL, balanceCliNew,       4, y + 6 , x, 0, 3, NULL , NULL},
+	  {"RESUMEN DE FACTURACION MES A MES",               NULL, NULL, 			          5, y + 8 , x, 0, 4, NULL , NULL},
+	  {"OPERACIONES POR FECHA",                          NULL, opsPorFechaCli, 		  6, y + 10, x, 0, 5, NULL , NULL},
+	  {"OPERACIONES ENTRE DOS FECHAS",                   NULL, opsEntreFechasCli,   7, y + 12, x, 0, 6, NULL , NULL},
 	  {"ULTIMAS 23 OPERACIONES (por cliente)",           NULL, ultimas_op_cli, 		  8, y + 14, x, 0, 7, NULL , NULL},
     {NULL, NULL, NULL, 							0, 0, 0, 0, 0, NULL , NULL}
 	};
@@ -48,7 +49,7 @@ int main()
 	};
 	
 	MenuItem ProvOp_menu[] = {
-    {"Altas",              NULL, agregarOrdCom, 			1, 22, 6, 0, 0, NULL , operaciones},
+    {"Altas",              NULL, agregarOrdCom, 			1, 22, 6, 0, 0, NULL , ordCom},
     {"Consultas", ConsProv_menu, NULL, 	              2, 22, 22, 0, 1, NULL , NULL},
     {"Menu anterior",      NULL, menprov, 	          3, 22, 37, 0, 2, NULL , NULL},
     {"Modificaciones",     NULL, modCom, 		          4, 22, 52, 0, 3, NULL , NULL},
@@ -71,7 +72,7 @@ int main()
 	MenuItem Compras_menu[] = {
     {"Lista de proveedores",  ListaProv_menu, NULL,  1, 2, 27, 0, 0, NULL , menprov},
     {"Registro de compras",      ProvOp_menu, NULL,      2, 4, 27, 1, 0, NULL , NULL},
-    {"Balance de compras",              NULL, NULL,              3, 6, 29, 2, 0, NULL , NULL},
+    {"Balance de compras",              NULL, balancePro,              3, 6, 29, 2, 0, NULL , NULL},
     {"Menu anterior",                   NULL, menu_principal,         4, 8, 30, 3, 0, NULL , NULL},
     {NULL, NULL, NULL,                              0, 0, 0, 0, 0, NULL , NULL}
 	};
@@ -117,7 +118,7 @@ int main()
 	  {"Listado",          NULL, NULL, 		            5, y+4, x, 4, 0, NULL , NULL},
 	  {"Pantalla",         NULL, chequesNoEntregados, 6, y+5, x, 5, 0, NULL , NULL},
 	  {"Retroceder",       NULL, menu_principal, 	    7, y+6, x, 6, 0, NULL , NULL},
-    {"Cheques en fecha", NULL, NULL, 		            8, y+7, x, 7, 0, NULL , NULL},
+    {"Cheques en fecha", NULL, chequesEnFecha, 		            8, y+7, x, 7, 0, NULL , NULL},
     {NULL, NULL, NULL, 			                        0, 0, 0, 0, 0, NULL , NULL}
 	};
 
@@ -156,3 +157,4 @@ int main()
 	endwin();
 	
 }
+

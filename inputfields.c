@@ -4,16 +4,57 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include "inputfields.h"
+#include "utilities.h"
 
 #define IS_EXTENDED_PRINT(c) ((unsigned char)(c) >= 32 && (unsigned char)(c) <= 255)
 
+static void format_input_buffer(InputField *field)
+{
+  field->count = field->max_length;
+  switch(field->type)
+  {
+    case INTEGER:
+    {
+      rightAlign(field->input_buffer, field->max_length);
+      zeroFill(&field->input_buffer[field->max_length - 1], 1); 
+      delLeadingZeroes(field->input_buffer, field->max_length);
+    }break;
+    case FLOAT:
+    {
+      /* align the integer part then the decimal part */
+      if(field->decPlaces > 0)
+      {
+        unsigned int dotPos = field->max_length - field->decPlaces - 1;
+        rightAlign(field->input_buffer, dotPos);
+        zeroFill(&field->input_buffer[field->max_length - field->decPlaces - 2], 
+                 field->decPlaces + 2);
+        field->input_buffer[dotPos] = '.';
+        delLeadingZeroes(field->input_buffer, dotPos);
+      }
+/*
+      else
+      {
+        rightAlign(field->input_buffer, field->max_length);
+        zeroFill(&field->input_buffer[field->max_length - 1], 1); 
+        delLeadingZeroes(field->input_buffer, field->max_length);
+      }
+*/
+    }break;
+    case STRING:
+    case CAP:
+    {
+      spaceFill(field->input_buffer, field->max_length);
+    }break;
+    default:
+    {
+
+    }
+  }
+}
 
 static int calculate_date_display_cursor_pos(const InputField* field) {
     // input_buffer stores DDMMYYYY. field->cursor_pos is index in this buffer.
     // Display format is YYYY-MM-DD.
-    // map_buffer_idx_to_display_x: maps DDMMYYYY buffer index to display X coordinate
-    //   Input_buffer indices: D1=0, D2=1, M1=2, M2=3, Y1=4, Y2=5, Y3=6, Y4=7
-    //   Display X positions for these digits: Y1=0, Y2=1, Y3=2, Y4=3, M1=5, M2=6, D1=8, D2=9
     int map_buffer_idx_to_display_x[8] = {
         0, // D1 (buffer_idx 0) -> display_x 8
         1, // D2 (buffer_idx 1) -> display_x 9
@@ -27,38 +68,53 @@ static int calculate_date_display_cursor_pos(const InputField* field) {
 
     int display_cursor_x;
 
-    if (field->count == 0) { // No input yet
-        display_cursor_x = 0; // Default to start of YYYY (display X position 0)
-    } else if (field->cursor_pos == field->count) { // Cursor is at the end of the current input
-        // Position cursor logically after the character at input_buffer[field->cursor_pos - 1]
+    if (field->count == 0) {
+        display_cursor_x = 0;
+    } else if (field->cursor_pos == field->count) {
         int buffer_idx_of_last_char = field->cursor_pos - 1;
-        // Ensure buffer_idx_of_last_char is valid before using it as an array index
         if (buffer_idx_of_last_char >= 0 && buffer_idx_of_last_char < 8) {
             display_cursor_x = map_buffer_idx_to_display_x[buffer_idx_of_last_char] + 1;
         } else {
-             display_cursor_x = 0; // Fallback, e.g. if cursor_pos was 0 but count > 0 (should not happen if cursor_pos=count)
+             display_cursor_x = 0;
         }
-    } else { // Cursor is logically before the character at input_buffer[field->cursor_pos]
-        // Ensure field->cursor_pos is valid
+    } else {
         if (field->cursor_pos >= 0 && field->cursor_pos < 8) {
             display_cursor_x = map_buffer_idx_to_display_x[field->cursor_pos];
         } else {
-            display_cursor_x = 0; // Fallback
+            display_cursor_x = 0;
         }
     }
     return display_cursor_x;
 }
 
-void init_input_field(InputField* field, const char* prompt, int max_length, bool password_mode, int start_x, int start_y, int type) {
-    field->prompt = strdup(prompt);
+void init_input_field(InputField* field, const char* prompt, 
+                      int max_length, int decPlaces, 
+                      int start_x, int start_y, int type) 
+{
+  field->prompt = prompt != 0 ? prompt : "UNDEFINED"; /* seems wrong */
+  if(max_length > (sizeof(field->input_buffer) - 1))
+    field->max_length = sizeof(field->input_buffer) - 1;
+  else if(type == DATE)
+    field->max_length = 8; /* Dates always use 8 characters so I overwrite it */
+  else
     field->max_length = max_length;
-    field->password_mode = password_mode;
-    field->start_x = start_x;
-    field->start_y = start_y;
-    memset(field->input_buffer, 0, sizeof(field->input_buffer));
-    field->count = 0;
-    field->cursor_pos = 0;
+  field->decPlaces = decPlaces >= (max_length - 1) ? max_length -2 : decPlaces;
+  field->start_x = start_x;
+  field->start_y = start_y;
+  memset(field->input_buffer, 0, sizeof(field->input_buffer));
+  field->count = 0;
+  field->cursor_pos = 0;
+  if(type >= 0 && type <= CAP)
     field->type = type;
+  else
+    field->type = STRING;
+  if(field->type == FLOAT)
+  {
+    if(field->decPlaces > 0)
+      format_input_buffer(field);
+    else
+      field->type = INTEGER;
+  }
 }
 
 
@@ -74,15 +130,21 @@ void draw_input_field(const InputField* field)
 		addch(' ');
 	}
 	move(field->start_y, field->start_x + strlen(field->prompt));
-	for (int i = 0; i < field->count; i++) 
-	{
-    if (field->password_mode) 
-		{
-      addch('*');
-    } 
-		else
-		{
+	if(field->type != FLOAT)
+  {
+    for (int i = 0; i < field->count; i++) 
+    {
       addch((unsigned char)field->input_buffer[i]);
+    }
+  }
+  else
+  {
+    for (int i = 0; i < field->max_length; i++) 
+    {
+      if(field->input_buffer[i] == '\0')
+        addch(' ');
+      else
+        addch((unsigned char)field->input_buffer[i]);
     }
   }
   attroff(A_REVERSE);
@@ -132,7 +194,7 @@ void draw_date_field(const InputField* field)
 
 static void insert_char(InputField* field, char ch) 
 {
-    if (field->count < field->max_length) 
+    if (field->type != FLOAT && field->count < field->max_length) 
     {
         // Use memmove for efficient shifting of the buffer
         memmove(&field->input_buffer[field->cursor_pos + 1],
@@ -144,22 +206,69 @@ static void insert_char(InputField* field, char ch)
         field->cursor_pos++;
         field->input_buffer[field->count] = '\0'; // Ensure null termination
     }
+/*
+    else if(field->type != FLOAT && field->count < field->max_length)
+    {
+      field->
+    }
+*/
 }
+
 
 
 static void overtype_char(InputField* field, char ch)
 {
-    if (field->cursor_pos < field->max_length) {
+    if (field->type != FLOAT && field->cursor_pos < field->max_length) 
+    {
         field->input_buffer[field->cursor_pos] = ch;
 
-        // Only increment count if we are at the end, effectively adding a new character
-        if (field->cursor_pos == field->count) {
+        if (field->cursor_pos == field->count) 
+        {
             field->count++;
             field->input_buffer[field->count] = '\0'; // Ensure null termination
         }
 
-        // Always advance the cursor
         field->cursor_pos++;
+    }
+    else if(field->type == FLOAT && field->decPlaces)
+    {
+      int dotPos = field->max_length - field->decPlaces - 1;
+      /* TEMPORARY */
+      field->input_buffer[dotPos] = '.';
+      /* TEMPORARY */
+      if(ch == '.')
+      {
+        if(field->cursor_pos < (dotPos + 1))
+        {
+          /* I am on the integer side, i rigth align it next to the dot and 
+           * move the cursor to the right of the dot else do nothing*/
+          rightAlignV2(field->input_buffer, (dotPos));
+          zeroFill(&field->input_buffer[field->max_length - field->decPlaces - 2], 
+               field->decPlaces + 2);
+          field->cursor_pos = dotPos + 1;
+          field->count = dotPos + 1;
+        }
+      }
+      else
+      {
+        if(field->cursor_pos < field->max_length)
+        {
+          field->input_buffer[field->cursor_pos] = ch;
+          
+          if (field->cursor_pos == field->count) 
+          {
+            field->count++;
+          }
+          field->cursor_pos++;
+          if(field->cursor_pos == (dotPos))
+          {
+            if (field->cursor_pos == field->count) 
+              field->count++;
+            field->cursor_pos++;
+          }
+          field->input_buffer[field->count] = '\0'; // Ensure null termination
+        }
+      }
     }
 }
 
@@ -215,16 +324,15 @@ void handle_input_char(InputField* field, int ch, bool ins)
             	}
             break;
         case FLOAT:
-            // Improved FLOAT handling (allows digits, '.', '+', '-')
             if (isdigit(ch) || ch == '.' || ch == '+' || ch == '-') {
-                // Add more sophisticated validation for FLOAT here if needed
-                // (e.g., only one decimal point, sign only at the beginning).
-
-                // rudimentary validation for float input
-                if (ch == '.' && strchr(field->input_buffer, '.') != NULL) {
-                  break; // only allow one decimal point
+/*
+                if (ch == '.' && strchr(field->input_buffer, '.') != NULL) 
+                {
+                  break;
                 }
-                if ((ch == '+' || ch == '-') && field->cursor_pos != 0 ) {
+*/
+                if ((ch == '+' || ch == '-') && field->cursor_pos != 0 ) 
+                {
                    break;
                 }
                 if(ins)
@@ -272,28 +380,75 @@ void handle_input_char(InputField* field, int ch, bool ins)
 }
 
 
-void handle_backspace(InputField* field) {
- 	if (field->cursor_pos > 0) {
-        	for (int i = field->cursor_pos; i < field->count; i++) {
-            		field->input_buffer[i - 1] = field->input_buffer[i];
+void handle_backspace(InputField* field) 
+{
+ 	if (field->cursor_pos > 0) 
+  {
+    if(field->type != FLOAT)
+    {
+      for (int i = field->cursor_pos; i < field->count; i++) 
+      {
+        field->input_buffer[i - 1] = field->input_buffer[i];
+      }
+      field->input_buffer[field->count - 1] = '\0';
+      field->count--;
+      field->cursor_pos--;
+    }
+    else
+    {
+      int dotPos = field->max_length - field->decPlaces - 1;
+      field->cursor_pos--;
+      if(field->cursor_pos == dotPos)
+        field->cursor_pos--;
+      for (int i = field->cursor_pos; i < field->count; i++) 
+      {
+        if((i+1) == dotPos)
+        {
+          field->input_buffer[i] = field->input_buffer[i + 2];
+          i++;
+          continue;
         }
-        	field->input_buffer[field->count - 1] = '\0';
-        	field->count--;
-        	field->cursor_pos--;
+        field->input_buffer[i] = field->input_buffer[i + 1];
+      }
+      field->input_buffer[field->count - 1] = '\0';
+      field->count--;
+    }
 	}
 }
 
-void handle_cursor_left(InputField* field) {
-            if (field->cursor_pos > 0) {
+void handle_cursor_left(InputField* field) 
+{
+    int dotPos = field->max_length - field->decPlaces - 1;
+    if (field->cursor_pos > 0) 
+    {
         field->cursor_pos--;
+        if(field->type == FLOAT && field->cursor_pos == dotPos)
+          field->cursor_pos--;
     }
 }
 
-void handle_cursor_right(InputField* field) {
-		if (field->cursor_pos < field->count) {
+void handle_cursor_right(InputField* field) 
+{
+    int dotPos = field->max_length - field->decPlaces - 1;
+    if (field->cursor_pos < field->count) 
+    {
         field->cursor_pos++;
+        if(field->type == FLOAT && field->cursor_pos == dotPos)
+          field->cursor_pos++;
     }
 }
+
+/*
+static void DEBUGPrintHexField(InputField *field, size_t size)
+{
+  move(0, 0);
+  for(int i = 0; i < size; i++)
+  {
+    printw("%02x ", field->input_buffer[i]);
+  }
+  printw("\ntype: %d max length: %d", field->type, field->max_length);
+}
+*/
 
 int input_fields_loop(InputField fields[], int num_fields,  void (*background)(void))
 {
@@ -316,6 +471,123 @@ int input_fields_loop(InputField fields[], int num_fields,  void (*background)(v
         }
 
         InputField* active_field = &fields[current_field_index];
+/* DEBUGPrintHexField(active_field, 20); */
+        int display_cursor_x_offset;
+        if (active_field->type == DATE) 
+        {
+            display_cursor_x_offset = calculate_date_display_cursor_pos(active_field);
+        } 
+        else 
+        {
+            display_cursor_x_offset = active_field->cursor_pos;
+        }
+        move(active_field->start_y, active_field->start_x + strlen(active_field->prompt) + display_cursor_x_offset);
+
+        refresh();
+
+        int ch = getch();
+
+        if (ch == KEY_ENTER || ch == '\n' || ch == '\r' || ch == PADENTER) 
+        {
+            format_input_buffer(active_field);
+            if (current_field_index == num_fields - 1) 
+            {
+                draw_input_field(active_field);
+                return 0;
+            } 
+            else 
+            {
+                first_field_input = true;
+                active_field->cursor_pos = 0; // TEST
+                current_field_index++;
+                // Optional: Reset cursor position for the new active field
+                // fields[current_field_index].cursor_pos = fields[current_field_index].count; // e.g., to end
+            }
+        } 
+				else if(ch == 27)
+				{
+          return 1;
+				}
+        else if (ch == KEY_UP)
+        {
+          
+            format_input_buffer(active_field);
+            if (current_field_index > 0) 
+            {
+                first_field_input = true;
+                active_field->cursor_pos = 0; // TEST
+                current_field_index--;
+            }
+        } 
+        else if (ch == KEY_DOWN) 
+        {
+            format_input_buffer(active_field);
+            if (current_field_index < num_fields - 1) 
+            { // Prevent going past last field
+                first_field_input = true;
+                active_field->cursor_pos = 0; // TEST
+                current_field_index++;
+            }
+        } 
+        else if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) 
+        { // Handle common backspace/delete keys
+            first_field_input = false;
+            handle_backspace(&fields[current_field_index]);
+        }
+        else if (ch == KEY_LEFT) 
+        {
+            first_field_input = false;
+            handle_cursor_left(&fields[current_field_index]);
+        }
+        else if (ch == KEY_RIGHT) 
+        {
+            first_field_input = false;
+            handle_cursor_right(&fields[current_field_index]);
+        }
+        //else if (ch >= 32 && ch <= 126) 
+        else if (IS_EXTENDED_PRINT((unsigned char)ch)) 
+        { // Standard printable ASCII
+            if(first_field_input && (active_field->type == INTEGER || active_field->type == FLOAT) && (isdigit(ch) || ch == '.' || ch == '+' || ch == '-')  )
+            {
+              for(int i = 0; i < active_field->max_length; i++)
+              {
+                //Clear active field
+                active_field->input_buffer[i] = 0;
+              }
+              active_field->count = 0;
+            }
+              handle_input_char(&fields[current_field_index], ch, is_insert_mode);
+              if(isdigit(ch) || ch == '.' || ch == '+' || ch == '-') first_field_input = false;
+        }
+        else if (ch == KEY_IC) 
+        {
+            is_insert_mode = !is_insert_mode;
+        }
+    }
+}
+
+int input_fields_loop_unformatted(InputField fields[], int num_fields,  void (*background)(void))
+{
+    int current_field_index = 0;
+    bool is_insert_mode = false;
+    bool first_field_input = true;
+    // Curses should be initialized by caller: initscr(), cbreak(), noecho(), keypad(stdscr, TRUE);
+    while(1){
+
+        for (int i = 0; i < num_fields; i++) 
+        {
+	        if(fields[i].type == DATE) 
+          {
+		        draw_date_field(&fields[i]);
+		      } 
+          else 
+          {
+            draw_input_field(&fields[i]);
+		      }
+        }
+
+        InputField* active_field = &fields[current_field_index];
+/* DEBUGPrintHexField(active_field, 20); */
         int display_cursor_x_offset;
         if (active_field->type == DATE) 
         {

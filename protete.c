@@ -18,6 +18,7 @@
 static void dateRectifier(char* date)
 {
   /*
+   * Change yyyymmdd dd-mm-yyyy that means date should be 10 or 11 bytes long
    *  the date is 8 char + 2 separators + null terminator added by snprintf;
    */
   char rightDate[11]; 
@@ -42,7 +43,7 @@ static void encodeMemo(char* encoded, InputField* memo)
   }
   for(int i = 0; i <= lastLine; i++)
   {
-    for(int j = 0; j < 31; j++)
+    for(int j = 0; j < 32; j++)
     {
       if(memo[i].input_buffer[j] != 0 && memo[i].input_buffer[j] != 0x0a)
       {
@@ -72,6 +73,16 @@ static void encodeMemo(char* encoded, InputField* memo)
     }
   }
   return;
+}
+
+static int hasLeadingZero(char* buffer, int size)
+{
+  for(int i = 0; i < size; i++)
+  {
+    if(buffer[i] == '0')
+      return 1;
+  }
+  return 0;
 }
 
 static void edMemoTextbox(char* buffer)
@@ -114,7 +125,14 @@ static void edMemoTextbox(char* buffer)
       ib++;
     }
   }
-  input_fields_loop(memo, boxHeight, NULL);
+  input_fields_loop_unformatted(memo, boxHeight, NULL);
+/*
+  for(int i = 0; i < 5; i++)
+  {
+    memo[i].input_buffer[30] = '\0';
+    memo[i].input_buffer[29] = '\0';
+  }
+*/
   //concatenate the input buffers
   encodeMemo(buffer, memo);
   return;
@@ -129,7 +147,14 @@ static void memoTextbox(char* buffer)
   {
     init_input_field(&memo[i], "", 31, FALSE, 4, 9 + i, STRING);
   }
-  input_fields_loop(memo, boxHeight, NULL);
+  input_fields_loop_unformatted(memo, boxHeight, NULL);
+/*
+  for(int i = 0; i < 5; i++)
+  {
+    memo[i].input_buffer[30] = '\0';
+    memo[i].input_buffer[29] = '\0';
+  }
+*/
   //concatenate the input buffers
   encodeMemo(buffer, memo);
   return;
@@ -177,6 +202,48 @@ static int indexIntersection(int* index1, int nOfInd1, int* index2, int nOfInd2,
 }
 */
 //Set Union between two indexe list for "deudores"
+
+static void showBalance(int rows, char (*total)[20])
+{
+  clear();
+  int i;
+  const char referencia[][64] = {"Suma de creditos a favor de clientes",
+                                 "Suma de facturas a favor de Gasperi",
+                                 "Suma de cheques entregados por Gasperi",
+                                 "Suma de efectivo entregado por Gasperi",
+                                 "Suma de cheques recibidos por clientes",
+                                 "Suma de efectivo recibido por clientes"};
+  char balanceNum[21] = {0};
+  sumFields(balanceNum, total[0], balanceNum);
+  subFields(balanceNum, total[1], balanceNum);
+  subFields(balanceNum, total[2], balanceNum);
+  subFields(balanceNum, total[3], balanceNum);
+  sumFields(balanceNum, total[4], balanceNum);
+  sumFields(balanceNum, total[5], balanceNum);
+  move(10, 0);
+  for(i = 0; i < rows; i++)
+  {
+    printw("          ");
+    printw("%39s: %s\n\n", referencia[i], total[i]);
+  }
+  printw("          Balance total: %s", balanceNum);
+  getch();
+  return;
+}
+
+
+static int isIdZero(char *id, int size)
+{
+  char zero[20] = "0";
+  char buffer[20] = {0};
+  int check;
+  memcpy(buffer, id, size);
+  rightAlign(buffer, size);
+  rightAlign(zero, size);
+  check = !strncmp(buffer, zero, size);
+  return check;
+}
+
 static int indexSetUnion(int* index1, int nOfInd1, int* index2, int nOfInd2, int* filtered)
 {
   int k = 0;
@@ -219,6 +286,15 @@ static int indexSetUnion(int* index1, int nOfInd1, int* index2, int nOfInd2, int
   return k;
 }
 
+/*
+static int bajas(int recNo, DBFile *file, int x, int y)
+{
+  InputField codigo[1];
+  int type = file->descr[0].type = 'N' ? INTEGER : STRING;
+  init_input_field(&codigo[0], file->descr[0]fieldname, file->descr[0].length, false, x + (6 - strlen(fieldname[i])), y, type);
+  return 0;
+}
+*/
 
 static int replaceSelection(char* id, char* idField ,const char* srcFile, const size_t srcRecNo, char* srcField, const char* destFile, char* destField)
 {
@@ -245,6 +321,7 @@ static int replaceSelection(char* id, char* idField ,const char* srcFile, const 
     retVal = -5;
     goto RSERROR;
   }
+  else srcPtr = NULL;
 
   destPtr = fopen(destFile, "r+b");
   if(srcPtr == NULL)
@@ -363,6 +440,7 @@ static void calculateOffset(SearchFields* fields, const char* field, size_t* off
   return;
 }
 //pRecord prints the record in a <<DESCRIPTOR: FIELD>> pair per line Trying to emulate the original Code.
+/*
 static void zeroFill(char* sto)
 {
   for(int i = 0; i < 4; i++)
@@ -371,7 +449,6 @@ static void zeroFill(char* sto)
   }
 }
 
-/*
   iFPtr = fopen(idxFName, "rb");
 
   if (ifPtr == NULL) 
@@ -385,7 +462,6 @@ static void zeroFill(char* sto)
   fclose(iFPtr);
 */
 
-//new function For calculating the balance for clients and suppliers
 static void pRecordNew(const char* arch, const size_t recIndex, const int xPos, const int yPos)
 {
   // declaracion de variables
@@ -450,7 +526,6 @@ static void pRecordNew(const char* arch, const size_t recIndex, const int xPos, 
 
 static void pRecord(const char* arch, const char* iField, const int xPos, const int yPos)
 {
-  //TODO date fields should be formatted
   FILE *fPtr = NULL;
   header head[1];
   descriptor descr[20];
@@ -514,7 +589,7 @@ static void pRecord(const char* arch, const char* iField, const int xPos, const 
 
     rightAlign(code, descr[0].length);
     
-    if(stock == 0) zeroFill(code);
+    if(stock == 0) zeroFill(code, descr[0].length);
     
     indice = get_index(descr[0].fieldname, code, fPtr, head, descr);
     
@@ -579,18 +654,22 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
   nOfDescr = store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
 
-  for(int i = 0; descr[i].fieldname[0] != 0x0d && i < 25; i++)
+  for(int i = 0; i < 25 && descr[i].fieldname[0] != 0x0d; i++)
   {
     strcpy(fieldname[i], descr[i].fieldname);
 	  fieldname[i][strlen(fieldname[i])] = ':';
 	  fieldname[i][strlen(fieldname[i])] = ' ';
-    init_input_field(&field[i], fieldname[i], descr[i].length, false, xPos + (6 - strlen(fieldname[i])), yPos + i, fType[i]);
+    init_input_field(&field[i], 
+                     fieldname[i], 
+                     descr[i].length, 
+                     descr[i].decimal, 
+                     xPos + (6 - strlen(fieldname[i])), 
+                     yPos + i, fType[i]);
 	  //nOfDescr++;
   }
   mvprintw(0, 0, "%d %x", nOfDescr, descr[nOfDescr - 1].fieldname);
-
+  
   int cancel = input_fields_loop(field, 1, NULL);
-
   if(cancel) 
   {
     return;
@@ -602,13 +681,24 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
     return;
 	}
 	rightAlign(field[0].input_buffer, descr[0].length); //All product codes are right aligned so any comparison 
+  if(descr[0].type == 'N')
+  {
+    verificacion = hasLeadingZero(field[0].input_buffer, descr[0].length);
+    if(verificacion)
+    {
+      mvprintw(0, 0, "Campo numerico no puede tener ceros a la izquierda");
+      getch();
+      return;
+    }
+  }
+
   indice = get_index(descr[0].fieldname, field[0].input_buffer, fPtr, head, descr);
   if(indice >= 0)
   {
     mvprintw(3, 7, "Ya existe un cliente con este numero");
     mvprintw(4, 7, "%d", indice);
-	getch();
-	return;
+    getch();
+    return;
   }
   
   if (fclose(fPtr) != 0) 
@@ -618,8 +708,11 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
     return;
   }
   
-  input_fields_loop(&field[1], nOfDescr - 1, NULL);
-  
+  cancel = input_fields_loop(&field[1], nOfDescr - 1, NULL);
+  if(cancel) 
+  {
+    return;
+	}
   // check for data
   
   for(size_t i = 0; i < nOfDescr; i++)
@@ -643,7 +736,7 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
     }
   }
   int off = 0;
-  for(int i = 0; descr[i].fieldname[0] != 0x0d && i < 25; i++)
+  for(int i = 0; i < 25 && descr[i].fieldname[0] != 0x0d; i++)
   {
     strncpy(&buffer[off], field[i].input_buffer, descr[i].length);
     off += descr[i].length;
@@ -653,21 +746,23 @@ static void agregarReg(const char* fName, const int* fType, const int xPos, cons
   
   addRecord(buffer, fName, head[0].record_bytes);
   
-mvprintw(0, 0, "%s %d", buffer, strlen(buffer));
-getch();
+//mvprintw(0, 0, "%s %d", buffer, strlen(buffer));
+//getch();
   return;
 }
 
 static void modReg(const char* fName, const int* fType, int xPos, int yPos)
 {
-  //char buffer[300] = {0};
+  // TODO Deal with the magic numbers
+  // As of now all the files have less than 25 fields
+  enum { MAX_TETE_FIELDS = 25, FIELD_NAME_SIZE = 14 };
   char fieldData[50] = {0};
   FILE* fPtr = NULL;
-  InputField field[25];
+  InputField field[MAX_TETE_FIELDS];
   header head[1];
-  descriptor descr[25]; 
-  char fieldname[25][14] = {0}; // test to see if i can add ':' PD: it worked
-  int nofdescr = 0;
+  descriptor descr[MAX_TETE_FIELDS]; 
+  char fieldname[MAX_TETE_FIELDS][FIELD_NAME_SIZE] = {0}; // test to see if i can add ':' PD: it worked
+  int nOfDescr = 0;
   int indice = 0;
   
   fPtr = fopen(fName, "rb");
@@ -678,22 +773,29 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
     return;
   }
 
-  store_header_data(head, fPtr, 0);
+  nOfDescr = store_header_data(head, fPtr, 0);
   store_descriptor_data(descr, fPtr);
 
  
 
-  for(int i = 0; descr[i].fieldname[0] != TERMINATOR && i < 25; i++)
+  for(int i = 0; i < MAX_TETE_FIELDS && descr[i].fieldname[0] != TERMINATOR; i++)
   {
     strcpy(fieldname[i], descr[i].fieldname);
 	  fieldname[i][strlen(fieldname[i])] = ':';
 	  fieldname[i][strlen(fieldname[i])] = ' ';
-    init_input_field(&field[i], fieldname[i], descr[i].length, false, xPos + (6 - strlen(fieldname[i])), yPos + i, fType[i]);
-	  nofdescr++;
+    init_input_field(&field[i], fieldname[i], 
+                     descr[i].length, descr[i].decimal, 
+                     xPos + (6 - strlen(fieldname[i])), yPos + i, 
+                     fType[i]);
   }
-  mvprintw(0, 0, "%d %x", nofdescr, descr[nofdescr - 1].fieldname);
+  mvprintw(0, 0, "%d %x", nOfDescr, descr[nOfDescr - 1].fieldname);
 
-  input_fields_loop(field, 1, NULL);
+  if(input_fields_loop(field, 1, NULL))
+    goto modRegExit;
+  spaceFill(field[0].input_buffer, descr[0].length);
+  if(!strncmp(field[0].input_buffer, "    ", descr[0].length) || 
+     !strncmp(field[0].input_buffer, "0   ", descr[0].length))
+    goto modRegExit;
 
   if(fType[0] == INTEGER) rightAlign(field[0].input_buffer, descr[0].length);
   indice = get_index(descr[0].fieldname, field[0].input_buffer, fPtr, head, descr);
@@ -706,7 +808,7 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
   
    //since i'm editing a record, I need to first copy its contents to input_buffer (1 per field)
   
-  for(int i = 1; i < nofdescr; i++)
+  for(int i = 1; i < nOfDescr; i++)
   {
     get_data(fieldData, indice, descr[i].fieldname, fPtr, head, descr);
     if(fType[i] == DATE)
@@ -730,11 +832,11 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
     return;
   }
   
-  input_fields_loop(&field[1], nofdescr - 1, NULL);
-  
+  if(input_fields_loop(&field[1], nOfDescr - 1, NULL))
+    goto modRegExit;
   // check for data
   
-  for(int i = 0; i < nofdescr; i++)
+  for(int i = 0; i < nOfDescr; i++)
   {
     if(field[i].type == STRING || field[i].type == CAP)
     {
@@ -755,7 +857,7 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
     }
   }
   
- /*  for(int i = 0; i < nofdescr; i++)
+ /*  for(int i = 0; i < nOfDescr; i++)
   {
 	  mvprintw(i, 0, "%s", field[i].input_buffer);
   } */
@@ -768,7 +870,7 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
     return;
   }
 
-  for(int i = 0; i < nofdescr; i++)
+  for(int i = 0; i < nOfDescr; i++)
   {
     replaceField(field[i].input_buffer, indice, descr[i].fieldname, fPtr, head, descr);
   }
@@ -784,12 +886,13 @@ static void modReg(const char* fName, const int* fType, int xPos, int yPos)
     getch();
     return;
   }
-  
+modRegExit:
+  for(int i = 0; i < nOfDescr; i++)
+    free((void*)field[i].prompt);
   return;
 }
 
-//remade extNeqFields for Extracting Clients who have debts
-static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
+static int extAcreedores(const char* fName, char* buffer, SearchFields* fields)
 {
   const size_t nOfFields = 4;
   //int nOfIndUnion = 0;
@@ -848,7 +951,7 @@ static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
   indexSetUnion(indicesAcr, nOfIndAcr, indicesDeu, nOfIndDeu, indicesUnion);
 
   //unsafe 
-  for(int i = 0; indicesUnion[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  for(int i = 0; i < FILTER_BUFFER_SIZE && indicesUnion[i] != -1; i++)
   {
     off = i * head[0].record_bytes; //should be + 1 but the whole idea of extracting fields is to limit the fields shown
     if(indicesUnion[i] != -1)
@@ -894,6 +997,122 @@ static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
   return nOfIndexes;
 }
 
+//remade extNeqFields for Extracting Clients who have debts
+static int extDeudores(const char* fName, char* buffer, SearchFields* fields)
+{
+  const size_t nOfFields = 5;
+  //int nOfIndUnion = 0;
+  int nOfIndAcr = 0;
+  int nOfIndDeu = 0;
+  FILE* fPtr = NULL;
+  descriptor descr[25];
+  header head[1];
+  int indicesAcr[FILTER_BUFFER_SIZE];
+  int indicesDeu[FILTER_BUFFER_SIZE];
+  int indicesUnion[FILTER_BUFFER_SIZE];
+  int nOfIndexes = 0;
+  size_t off = 0;
+  char fieldType[25];
+  int fieldSizes[25] = {0};
+  char acree[25] = {0};
+  char deudo[25] = {0};
+  
+  memset(indicesAcr, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  memset(indicesDeu, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  memset(indicesUnion, -1, FILTER_BUFFER_SIZE * sizeof(int));
+  
+  fPtr = fopen(fName, "rb");
+  if(fPtr == NULL)
+  {
+    mvprintw(0, 0, "No se pudo abrir %s", fName);
+    return -1;
+  }
+  
+  int nOfDescr = store_header_data(head, fPtr, 0);
+  store_descriptor_data(descr, fPtr);
+  
+  for(size_t i = 0; i < nOfFields; i++)
+  {
+    for(int j = 0; j < nOfDescr; j++)
+    {
+      if(!strncmp(descr[j].fieldname, fields[i].fieldName, strlen(fields[i].fieldName)))
+      {
+        fieldSizes[i] = descr[j].length;
+        fieldType[i] = descr[j].type;
+      }
+    }
+  }
+  char zero[16] = "0.00";
+  size_t saldoSize = fieldSizes[3] + 1;
+  rightAlign(zero, fieldSizes[3]);
+  nOfIndAcr = get_indexes_neq(indicesAcr, fields[3].fieldName, zero, fPtr, head, descr);
+  if(nOfIndAcr < 0)
+  {
+    mvprintw(0, 0, "Error: %d", nOfIndAcr);
+  }
+  nOfIndDeu = get_indexes_neq(indicesDeu, fields[4].fieldName, zero, fPtr, head, descr);
+  if(nOfIndDeu < 0)
+  {
+    mvprintw(0, 0, "Error: %d", nOfIndDeu);
+  }
+  
+  indexSetUnion(indicesAcr, nOfIndAcr, indicesDeu, nOfIndDeu, indicesUnion);
+
+  //unsafe 
+  for(int i = 0; i < FILTER_BUFFER_SIZE && indicesUnion[i] != -1; i++)
+  {
+    off = i * head[0].record_bytes; //should be + 1 but the whole idea of extracting fields is to limit the fields shown
+    if(indicesUnion[i] != -1)
+    {
+      for(size_t j = 0; j < nOfFields; j++)
+      {
+        if(j > 0) 
+        {
+          buffer[off] = '|';
+          off++;
+        }
+        get_data(&buffer[off], indicesUnion[i], fields[j].fieldName, fPtr, head, descr);
+        if(fieldType[j] == 'D')
+        {
+          dateRectifier(&buffer[off]);
+          off += 2; // the date bars
+          if(fields[j].setting == YEAR_OFF) 
+          {
+            off -= 5;
+          }
+        }
+        if(j == 3)
+        {
+          memcpy(acree, &buffer[off], fieldSizes[j]);
+        }
+        if(j == 4)
+        {
+          memcpy(deudo, &buffer[off], fieldSizes[j]);
+        }        
+        off += fieldSizes[j];
+        if(j == nOfFields - 1)
+        {
+          buffer[off] = '|';
+          off++;
+          subFields(&buffer[off], deudo, acree);
+          rightAlign(&buffer[off], saldoSize);
+          off += saldoSize;
+        }
+      }
+      buffer[off] = 0;
+      off++;
+    }
+    nOfIndexes++;
+  }
+  
+  if(fclose(fPtr) != 0)
+  {
+    mvprintw(0, 0, "No se pudo cerrar %s", fName);
+    return -2;
+  }
+  return nOfIndexes;
+}
+
 //Extracts into a buffer the fields that match exactly with my search criteria
 static int extCoinFields(const SearchConfig* config, char* buffer, const char* toMatch)
 {
@@ -936,7 +1155,7 @@ static int extCoinFields(const SearchConfig* config, char* buffer, const char* t
     
   }
 
-  for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  for(int i = 0; i < FILTER_BUFFER_SIZE && indices[i] != -1; i++)
   {
     if(indices[i] != -1)
     {
@@ -988,6 +1207,8 @@ static int extCoinFields(const SearchConfig* config, char* buffer, const char* t
 
 static int extNeqFields(const SearchConfig* config, char* buffer, const char* toMatch)
 {
+  /* For debugging */
+  /* */
   int err;
   FILE* fPtr = NULL;
   descriptor descr[25];
@@ -1021,13 +1242,14 @@ static int extNeqFields(const SearchConfig* config, char* buffer, const char* to
     }
   }
   err = get_indexes_neq(indices, config->fieldName, toMatch, fPtr, head, descr);
-  if(err)
+  if(err < 0)
   {
     mvprintw(0, 0, "Error: %d", err);
+    getch();
     return -3;
   }
 
-  for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  for(int i = 0; i < FILTER_BUFFER_SIZE && indices[i] != -1; i++)
   {
     if(indices[i] != -1)
     {
@@ -1038,6 +1260,7 @@ static int extNeqFields(const SearchConfig* config, char* buffer, const char* to
           buffer[off] = ' ';
           off++;
         }
+  mvprintw(0, 0, "%d %i %d", off, i, err);
         get_data(&buffer[off], indices[i], config->fields[j].fieldName, fPtr, head, descr);
 
         if(fieldType[j] == 'D')
@@ -1119,7 +1342,7 @@ static int extGrFields(const SearchConfig* config, char* buffer, const char* toM
     mvprintw(0, 0, "Error: %d", err);
   }
 
-  for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  for(int i = 0; i < FILTER_BUFFER_SIZE && indices[i] != -1; i++)
   {
     if(indices[i] != -1)
     {
@@ -1211,7 +1434,7 @@ static int extLowFields(const SearchConfig* config, char* buffer, const char* to
     mvprintw(0, 0, "Error: %d", err);
   }
 
-  for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  for(int i = 0; i < FILTER_BUFFER_SIZE && indices[i] != -1; i++)
   {
     if(indices[i] != -1)
     {
@@ -1305,7 +1528,7 @@ static int extBetwFields(const SearchConfig* config , char* buffer, const char* 
     mvprintw(0, 0, "Error: %d", err);
   }
 
-  for(int i = 0; indices[i] != -1 && i < FILTER_BUFFER_SIZE; i++)
+  for(int i = 0; i < FILTER_BUFFER_SIZE && indices[i] != -1; i++)
   {
     if(indices[i] != -1)
     {
@@ -1355,6 +1578,54 @@ static int extBetwFields(const SearchConfig* config , char* buffer, const char* 
   return nOfIndexes;
 }
 
+static void balance(SearchFields *campos, char* fName)
+{
+  enum { fieldBuffSize = 20, totalSize = 13, fieldSize = 10 };
+  DBFile ctasCtes[1];
+  char *operations;
+  descriptor descr[MAX_DBF_FIELDS];
+  int nOfInd, offset = 0, nOfDescr, startDescrInd;
+  char totales[6][20] = {0}, sumBuff1[fieldBuffSize] = {0}, 
+       sumBuff2[fieldBuffSize] = {0};
+  SearchConfig config[1] = 
+  {
+    INIT_SEARCH_CONFIG(
+                        .fName = fName,
+												.nOfFields = 6,
+												.fields = campos,
+												.fieldName = "FECHA",
+												.extraSpace = 0
+                      )
+  };
+  for(int i = 0; i < 6; i++)
+    memcpy(totales[i], "        0.00", totalSize);
+  ctasCtes->descr = descr;
+  nOfDescr = OpenDBaseFile(ctasCtes, fName, "rb");
+  startDescrInd = findField(campos[0].fieldName, ctasCtes->descr, nOfDescr);
+  operations = malloc(ctasCtes->head->nofrecords * ctasCtes->head->record_bytes);
+  nOfInd = extNeqFields(config, operations, "          ");
+  for(int i = 0; i < nOfInd; i++)
+  {
+    for(int j = 0; j < 6; j++)
+    {
+      memcpy(sumBuff1, &operations[offset], fieldSize);
+      memcpy(sumBuff2, totales[j], totalSize);
+      rightAlign(sumBuff1, fieldSize);
+      rightAlign(sumBuff2, totalSize);
+      sumFields(totales[j], sumBuff2, sumBuff1);
+      rightAlign(totales[j], totalSize);
+      memset(sumBuff1, 0, fieldBuffSize);
+      memset(sumBuff2, 0, fieldBuffSize);
+      offset += ctasCtes->descr[startDescrInd + j].length + 1;
+    }
+  }
+  showBalance(6, totales);
+  free((void*)operations);
+  if(fclose(ctasCtes->fPtr) != 0)
+  {
+    mvprintw(0, 0, "Error al cerrar el archivo");
+  }
+}
 //The purpose of this function is to display a text buffer with vertical scrolling
 static void vScroller(char* buffer,
                       int startX, 
@@ -1616,7 +1887,7 @@ void consulta_operacion(void){
   wrefresh(win);
   endwin();
   
-  free(entrada[0].prompt);
+  free((void*)entrada[0].prompt);
   if (fclose(ctasctes_ptr) != 0) 
   {
     mvprintw(0,0,"error al cerrar el archivo: %s", strerror(errno));
@@ -1643,9 +1914,9 @@ void consulta_compra(void)
 
   init_input_field(&entrada[0], "Operacion: ", 4, false, 5, 2, STRING);
 
-  operaciones();
+  ordCom();
   input_fields_loop(entrada, entradas, operaciones);
-  operaciones();
+  ordCom();
 
   refresh();
 
@@ -1749,7 +2020,7 @@ mvprintw(0, 0, "Representacion en hexadecimal: %x %x %x %x %x %x ",
      entrada[0].input_buffer[5]);
 */
 
-  free(entrada[0].prompt);
+  free((void*)entrada[0].prompt);
   if (fclose(compras_ptr) != 0) 
   {
 
@@ -1826,7 +2097,7 @@ void saldoEnOperaciones(char* operaciones, descriptor* descr, size_t nOfInd)
 
 void opsCliPorImpresora(void)
 {
-  const int indexAlloc = 500;
+  enum { indexAlloc = 500 };
   header ctasHead[1];
   descriptor ctasDescr[MAX_DBF_FIELDS];
   InputField entrada[1];
@@ -1888,8 +2159,8 @@ void opsCliPorImpresora(void)
     getch();
     return;
   }
-  free(entrada[0].prompt);
-  free(dbfData);
+  free((void*)entrada[0].prompt);
+  free((void*)dbfData);
   return;
 }
 
@@ -1901,7 +2172,7 @@ void ultimas_op_cli(void)
    *  for this use case I know there will not be more than 1 operation 
    *  per client per day meaning no more than 365 operations per year 
    * */
-  const int indexAlloc = 500;
+  enum { indexAlloc = 500 };
 
 
   header ctasHead[1];
@@ -1992,8 +2263,8 @@ void ultimas_op_cli(void)
     getch();
     return;
   }
-  free(entrada[0].prompt);
-  free(dbfData);
+  free((void*)entrada[0].prompt);
+  free((void*)dbfData);
   return;
 }
 
@@ -2181,8 +2452,8 @@ refresh();
   }
   
   refresh();
-  free(entrada[0].prompt);
-  free(dbfData);
+  free((void*)entrada[0].prompt);
+  free((void*)dbfData);
   return;
 }
 */
@@ -2190,7 +2461,7 @@ refresh();
 
 static void opsPorFecha(const char *fName, SearchFields *campos, int *camposSize, int nFechas)
 {
-  const int indexAlloc = 50;
+  enum { indexAlloc = 50 };
   DBFile ops[1];
   descriptor descr[25];
   ops->descr = descr;
@@ -2276,8 +2547,8 @@ static void opsPorFecha(const char *fName, SearchFields *campos, int *camposSize
     getch();
     return;
   }
-  free(fecha[0].prompt);
-  free(buffer);
+  free((void*)fecha[0].prompt);
+  free((void*)buffer);
   return;
 }
 
@@ -2319,9 +2590,96 @@ void opsEntreFechasCli(void)
   return;
 }
 
+void balanceCli(void)
+{
+  enum { fieldBuffSize = 20, totalSize = 13, fieldSize = 10 };
+  DBFile ctasCtes[1];
+  char *operations;
+  descriptor descr[MAX_DBF_FIELDS];
+  int nOfInd, offset = 0, nOfDescr, startDescrInd;
+  char totales[6][20] = {0}, sumBuff1[fieldBuffSize] = {0}, 
+       sumBuff2[fieldBuffSize] = {0};
+  SearchFields campos[] = 
+  {
+    {"ACREE", YEAR_OFF},
+    {"DEUDO", YEAR_OFF},
+    {"ECHEQ", YEAR_OFF},
+    {"EEFEC", YEAR_OFF},
+    {"RCHEQ", YEAR_OFF},
+    {"REFEC", YEAR_OFF}
+  };
+  SearchConfig config[1] = 
+  {
+    INIT_SEARCH_CONFIG(
+                        .fName = "CTASCTES.DBF",
+												.nOfFields = 6,
+												.fields = campos,
+												.fieldName = "FECHA",
+												.extraSpace = 0
+                      )
+  };
+  for(int i = 0; i < 6; i++)
+    memcpy(totales[i], "        0.00", totalSize);
+  ctasCtes->descr = descr;
+  nOfDescr = OpenDBaseFile(ctasCtes, "CTASCTES.DBF", "rb");
+  startDescrInd = findField(campos[0].fieldName, ctasCtes->descr, nOfDescr);
+  operations = malloc(ctasCtes->head->nofrecords * ctasCtes->head->record_bytes);
+  nOfInd = extNeqFields(config, operations, "          ");
+  for(int i = 0; i < nOfInd; i++)
+  {
+    for(int j = 0; j < 6; j++)
+    {
+      memcpy(sumBuff1, &operations[offset], fieldSize);
+      memcpy(sumBuff2, totales[j], totalSize);
+      rightAlign(sumBuff1, fieldSize);
+      rightAlign(sumBuff2, totalSize);
+      sumFields(totales[j], sumBuff2, sumBuff1);
+      rightAlign(totales[j], totalSize);
+      memset(sumBuff1, 0, fieldBuffSize);
+      memset(sumBuff2, 0, fieldBuffSize);
+      offset += ctasCtes->descr[startDescrInd + j].length + 1;
+    }
+  }
+  showBalance(6, totales);
+  free((void*)operations);
+  if(fclose(ctasCtes->fPtr) != 0)
+  {
+    mvprintw(0, 0, "Error al cerrar el archivo");
+  }
+}
+
+void balanceCliNew(void)
+{
+  SearchFields campos[] = 
+  {
+    {"ACREE", YEAR_OFF},
+    {"DEUDO", YEAR_OFF},
+    {"ECHEQ", YEAR_OFF},
+    {"EEFEC", YEAR_OFF},
+    {"RCHEQ", YEAR_OFF},
+    {"REFEC", YEAR_OFF}
+  };
+  balance(campos, "CTASCTES.DBF");
+}
+
+
+void balancePro(void)
+{
+  SearchFields campos[] = 
+  {
+    {"PACREE", YEAR_OFF},
+    {"PDEUDO", YEAR_OFF},
+    {"VECHEQ", YEAR_OFF},
+    {"VEEFEC", YEAR_OFF},
+    {"VRCHEQ", YEAR_OFF},
+    {"VREFEC", YEAR_OFF}
+  };
+  balance(campos, "COMPRA.dbf");
+}
+
 void opsComPorImpresora(void)
 {
-  const int indexAlloc = 500;
+  enum { indexAlloc = 500 };
   header comHead[1];
   descriptor comDescr[MAX_DBF_FIELDS];
   InputField entrada[1];
@@ -2337,7 +2695,7 @@ void opsComPorImpresora(void)
 
   if (comPtr == NULL) 
   {
-    perror("error abriendo comCTES.dbf");
+    perror("error abriendo COMPRA.dbf");
     return;
   }
 
@@ -2383,8 +2741,8 @@ void opsComPorImpresora(void)
     getch();
     return;
   }
-  free(entrada[0].prompt);
-  free(dbfData);
+  free((void*)entrada[0].prompt);
+  free((void*)dbfData);
   return;
 }
 
@@ -2428,7 +2786,7 @@ void opsEntreFechasProv(void)
 
 void ultimasOpCom(void)
 {
-  const int indexAlloc = 500;
+  enum { indexAlloc = 500 };
   header comHead[1];
   descriptor comDescr[MAX_DBF_FIELDS];
   InputField entrada[1];
@@ -2518,8 +2876,8 @@ void ultimasOpCom(void)
     getch();
     return;
   }
-  free(entrada[0].prompt);
-  free(dbfData);
+  free((void*)entrada[0].prompt);
+  free((void*)dbfData);
   return;
 }
 
@@ -2547,7 +2905,6 @@ void agregarCtacte(void)
   char lastOp[4 + 1] = {0};
   char buffer[118 + 50] = {0};
   char memo [10 + 1] = "          ";
-  //int opint[6] = {0};
 
   //Variables related to CLIPRO.dbf
   int cliente = 0;
@@ -2561,7 +2918,6 @@ void agregarCtacte(void)
 
   //other
   int repeat = 0;
-  int exit = 0;
 
   //statements 
 
@@ -2605,7 +2961,7 @@ void agregarCtacte(void)
     repeat = 0;
     
     init_input_field(&cabecera[0], "Operacion:[", ctasctes_descr[0].length , false, 5, 2, INTEGER); //automatically write last op. + 1
-    init_input_field(&cabecera[1], "Fecha: ", ctasctes_descr[1].length, false, 28, 2, DATE); //should make a date parser
+    init_input_field(&cabecera[1], "Fecha: ", ctasctes_descr[1].length, false, 28, 2, DATE);
     init_input_field(&cabecera[2], "factura no.:", ctasctes_descr[2].length, false, 46, 2, STRING); 
     init_input_field(&cabecera[3], "cliente: ", ctasctes_descr[3].length, false, 8, 4, INTEGER);
 
@@ -2625,26 +2981,29 @@ void agregarCtacte(void)
 
     
     operaciones();
-    input_fields_loop(cabecera, cabeceras, operaciones);
+    input_fields_loop(cabecera, 1, operaciones);
+    int currOp = atoi(cabecera[0].input_buffer);
+    rightAlign(cabecera[0].input_buffer, ctasctes_descr[0].length);
 
+    if (currOp == 0 || iLastOp != atoi(cabecera[0].input_buffer))
+      goto clean_cabecera;
+    
+    input_fields_loop(&cabecera[1], cabeceras - 1, operaciones);
     rightAlign(cabecera[3].input_buffer, ctasctes_descr[3].length);
-    exit = strncmp(cabecera[3].input_buffer, "   0", ctasctes_descr[3].length);
 
-    if (exit == 0)
-    {
-      free(cabecera[0].prompt);
-      free(cabecera[1].prompt);
-      free(cabecera[2].prompt);
-      free(cabecera[3].prompt);
-      return;
-    }
-
+    if(cabecera[3].input_buffer[cabecera[3].max_length - 2] == ' ' &&
+        cabecera[3].input_buffer[cabecera[3].max_length - 1] == '0')
+      goto clean_cabecera;
+    
     if(strncmp(cabecera[3].input_buffer, "    ", ctasctes_descr[3].length) == 0)
     {
-      free(cabecera[0].prompt);
-      free(cabecera[1].prompt);
-      free(cabecera[2].prompt);
-      free(cabecera[3].prompt);
+clean_cabecera:
+      free((void*)cabecera[0].prompt);
+      free((void*)cabecera[1].prompt);
+      free((void*)cabecera[2].prompt);
+      free((void*)cabecera[3].prompt);
+      if (currOp == 0)
+        return;
       repeat = 1;
     }
   } while(repeat);
@@ -2670,7 +3029,7 @@ void agregarCtacte(void)
   rightAlign(cabecera[3].input_buffer, ctasctes_descr[3].length);
 
   cliente = get_index(cli_descr[0].fieldname, cabecera[3].input_buffer, cli_ptr, cli_head, cli_descr);
-  if(cliente < NOT_FOUND)
+  if(cliente < 0)
   {
     mvprintw(0, 0, "No hay cliente registrado con ese nombre");
     getch();
@@ -2701,12 +3060,12 @@ void agregarCtacte(void)
     mvprintw(14, 64, "%s", saldo);
   }
 
-  init_input_field(&operacion[0], "Credito ", ctasctes_descr[5].length , false, 39, 9, FLOAT);
-  init_input_field(&operacion[1], "Factura$", ctasctes_descr[6].length, false, 39, 10, FLOAT);
-  init_input_field(&operacion[2], "Cheque", ctasctes_descr[7].length, false, 4, 17, FLOAT); 
-  init_input_field(&operacion[3], "Efec.", ctasctes_descr[8].length, false, 22, 17, FLOAT);
-  init_input_field(&operacion[4], "Cheque", ctasctes_descr[9].length, false, 39, 17, FLOAT); 
-  init_input_field(&operacion[5], "Efectivo", ctasctes_descr[10].length, false, 57, 17, FLOAT);
+  init_input_field(&operacion[0], "Credito ", ctasctes_descr[5].length , ctasctes_descr[5].decimal, 39, 9, FLOAT);
+  init_input_field(&operacion[1], "Factura$", ctasctes_descr[6].length, ctasctes_descr[6].decimal, 39, 10, FLOAT);
+  init_input_field(&operacion[2], "Cheque", ctasctes_descr[7].length, ctasctes_descr[7].decimal, 4, 17, FLOAT); 
+  init_input_field(&operacion[3], "Efec.", ctasctes_descr[8].length, ctasctes_descr[8].decimal, 22, 17, FLOAT);
+  init_input_field(&operacion[4], "Cheque", ctasctes_descr[9].length, ctasctes_descr[9].decimal, 39, 17, FLOAT); 
+  init_input_field(&operacion[5], "Efectivo", ctasctes_descr[10].length, ctasctes_descr[10].decimal, 57, 17, FLOAT);
 
 refresh();
 
@@ -2861,19 +3220,20 @@ refresh();
 
     replaceField(cliAcr, cliente, "ACREEDOR", cli_ptr, cli_head, cli_descr);
     replaceField(cliDeu, cliente, "DEUDOR", cli_ptr, cli_head, cli_descr);
+    replaceField(cabecera[1].input_buffer, cliente, "FEULTCOM", cli_ptr, cli_head, cli_descr);
   }
   
-  free(cabecera[0].prompt);
-  free(cabecera[1].prompt);
-  free(cabecera[2].prompt);
-  free(cabecera[3].prompt);
+  free((void*)cabecera[0].prompt);
+  free((void*)cabecera[1].prompt);
+  free((void*)cabecera[2].prompt);
+  free((void*)cabecera[3].prompt);
 
-  free(operacion[0].prompt);
-  free(operacion[1].prompt);
-  free(operacion[2].prompt);
-  free(operacion[3].prompt);
-  free(operacion[4].prompt);
-  free(operacion[5].prompt);
+  free((void*)operacion[0].prompt);
+  free((void*)operacion[1].prompt);
+  free((void*)operacion[2].prompt);
+  free((void*)operacion[3].prompt);
+  free((void*)operacion[4].prompt);
+  free((void*)operacion[5].prompt);
 
   if (fclose(cli_ptr) != 0) 
   {
@@ -2931,7 +3291,6 @@ void agregarOrdCom(void)
   //other
 
   int repeat = 0;
-  int exit = 0;
 
   //statements 
 
@@ -2987,7 +3346,7 @@ for(int i = 0; i < 10; i++)
     init_input_field(&cabecera[2], "factura no.:", compra_descr[2].length, false, 46, 2, STRING); 
     init_input_field(&cabecera[3], "proveedor: ", compra_descr[3].length, false, 8, 4, INTEGER);
 
-    operaciones();
+    ordCom();
 
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
@@ -3004,27 +3363,29 @@ for(int i = 0; i < 10; i++)
 
     
 
-    input_fields_loop(cabecera, cabeceras, operaciones);
+    input_fields_loop(cabecera, 1, operaciones);
+    int currOp = atoi(cabecera[0].input_buffer);
+    rightAlign(cabecera[0].input_buffer, compra_descr[0].length);
 
+    if (currOp == 0 || iLastOp != atoi(cabecera[0].input_buffer))
+      goto clean_cabecera;
+    
+    input_fields_loop(&cabecera[1], cabeceras - 1, operaciones);
     rightAlign(cabecera[3].input_buffer, compra_descr[3].length);
-    exit = strncmp(cabecera[3].input_buffer, "  0", compra_descr[3].length);
-    //mvprintw(2, 2, "1%d1", exit);
 
-    if (exit == 0)
+    if(cabecera[3].input_buffer[cabecera[3].max_length - 2] == ' ' &&
+        cabecera[3].input_buffer[cabecera[3].max_length - 1] == '0')
+      goto clean_cabecera;
+    
+    if(strncmp(cabecera[3].input_buffer, "    ", compra_descr[3].length) == 0)
     {
-      free(cabecera[0].prompt);
-      free(cabecera[1].prompt);
-      free(cabecera[2].prompt);
-      free(cabecera[3].prompt);
-      return;
-    }
-
-    if(strncmp(cabecera[3].input_buffer, "      ", compra_descr[3].length) == 0)
-    {
-      free(cabecera[0].prompt);
-      free(cabecera[1].prompt);
-      free(cabecera[2].prompt);
-      free(cabecera[3].prompt);
+clean_cabecera:
+      free((void*)cabecera[0].prompt);
+      free((void*)cabecera[1].prompt);
+      free((void*)cabecera[2].prompt);
+      free((void*)cabecera[3].prompt);
+      if (currOp == 0)
+        return;
       repeat = 1;
     }
   } while(repeat);
@@ -3051,7 +3412,7 @@ for(int i = 0; i < 10; i++)
   rightAlign(provid, pro_descr[0].length);
 
   proveedor = get_index(pro_descr[0].fieldname, provid, pro_ptr, pro_head, pro_descr);
-  if(proveedor ==  NOT_FOUND)
+  if(proveedor <  0)
   {
     mvprintw(0, 0, "No hay proveedor registrado con ese nombre");
     getch();
@@ -3099,12 +3460,12 @@ for(int i = 0; i < 10; i++)
     mvprintw(14, 64, "%s", saldo);
   }
 
-  init_input_field(&operacion[0], "Credito ", compra_descr[11].length , false, 39, 9, FLOAT);
-  init_input_field(&operacion[1], "Factura$", compra_descr[12].length, false, 39, 10, FLOAT);
-  init_input_field(&operacion[2], "Cheque", compra_descr[13].length, false, 4, 17, FLOAT); 
-  init_input_field(&operacion[3], "Efec.", compra_descr[14].length, false, 22, 17, FLOAT);
-  init_input_field(&operacion[4], "Cheque", compra_descr[15].length, false, 39, 17, FLOAT); 
-  init_input_field(&operacion[5], "Efectivo", compra_descr[16].length, false, 57, 17, FLOAT);
+  init_input_field(&operacion[0], "Acreedor", compra_descr[11].length , compra_descr[11].decimal , 39, 9, FLOAT);
+  init_input_field(&operacion[1], "Deudor  ", compra_descr[12].length, compra_descr[12].decimal, 39, 10, FLOAT);
+  init_input_field(&operacion[2], "Cheque", compra_descr[13].length, compra_descr[13].decimal, 4, 17, FLOAT); 
+  init_input_field(&operacion[3], "Efec.", compra_descr[14].length, compra_descr[14].decimal, 22, 17, FLOAT);
+  init_input_field(&operacion[4], "Cheque", compra_descr[15].length, compra_descr[15].decimal, 39, 17, FLOAT); 
+  init_input_field(&operacion[5], "Efectivo", compra_descr[16].length, compra_descr[16].decimal, 57, 17, FLOAT);
 
 refresh();
 
@@ -3270,17 +3631,17 @@ refresh();
   }
 
   
-  free(cabecera[0].prompt);
-  free(cabecera[1].prompt);
-  free(cabecera[2].prompt);
-  free(cabecera[3].prompt);
+  free((void*)cabecera[0].prompt);
+  free((void*)cabecera[1].prompt);
+  free((void*)cabecera[2].prompt);
+  free((void*)cabecera[3].prompt);
 
-  free(operacion[0].prompt);
-  free(operacion[1].prompt);
-  free(operacion[2].prompt);
-  free(operacion[3].prompt);
-  free(operacion[4].prompt);
-  free(operacion[5].prompt);
+  free((void*)operacion[0].prompt);
+  free((void*)operacion[1].prompt);
+  free((void*)operacion[2].prompt);
+  free((void*)operacion[3].prompt);
+  free((void*)operacion[4].prompt);
+  free((void*)operacion[5].prompt);
 
   if (fclose(pro_ptr) != 0) 
   {
@@ -3358,12 +3719,12 @@ mvprintw(0, 0, "indice = %d", indice);
 
   //I init the input fields and copy the values of the fields into input_buffer 
 
-  init_input_field(&operacion[0], "Credito ", ctasctes_descr[5].length , false, 39, 9, FLOAT);
-  init_input_field(&operacion[1], "Factura$", ctasctes_descr[6].length, false, 39, 10, FLOAT);
-  init_input_field(&operacion[2], "Cheque", ctasctes_descr[7].length, false, 4, 17, FLOAT); 
-  init_input_field(&operacion[3], "Efec.", ctasctes_descr[8].length, false, 22, 17, FLOAT);
-  init_input_field(&operacion[4], "Cheque", ctasctes_descr[9].length, false, 39, 17, FLOAT); 
-  init_input_field(&operacion[5], "Efectivo", ctasctes_descr[10].length, false, 57, 17, FLOAT);
+  init_input_field(&operacion[0], "Credito ", ctasctes_descr[5].length , ctasctes_descr[5].decimal , 39, 9, FLOAT);
+  init_input_field(&operacion[1], "Factura$", ctasctes_descr[6].length, ctasctes_descr[6].decimal, 39, 10, FLOAT);
+  init_input_field(&operacion[2], "Cheque", ctasctes_descr[7].length, ctasctes_descr[7].decimal, 4, 17, FLOAT); 
+  init_input_field(&operacion[3], "Efec.", ctasctes_descr[8].length, ctasctes_descr[8].decimal, 22, 17, FLOAT);
+  init_input_field(&operacion[4], "Cheque", ctasctes_descr[9].length, ctasctes_descr[9].decimal, 39, 17, FLOAT); 
+  init_input_field(&operacion[5], "Efectivo", ctasctes_descr[10].length, ctasctes_descr[10].decimal, 57, 17, FLOAT);
 
   get_data(buffer, indice, ctasctes_descr[0].fieldname, ctasctes_ptr, ctasctes_head, ctasctes_descr);
   mvprintw(2, 17, "%s", buffer);
@@ -3581,7 +3942,7 @@ mvprintw(0, 0, "indice = %d", indice);
     return;
   }
   
-  free(entrada[0].prompt);
+  free((void*)entrada[0].prompt);
   if (fclose(cli_ptr) != 0) 
   {
     mvprintw(0,0,"error al cerrar el archivo: %s", strerror(errno));
@@ -3632,7 +3993,7 @@ void modCom(void)
   init_input_field(&entrada[0], "Operacion: ", 6, false, 5, 2, STRING);
   input_fields_loop(entrada, entradas, NULL);
 
-  operaciones();
+  ordCom();
 
   refresh();
 
@@ -3659,12 +4020,12 @@ void modCom(void)
   }
 
   //I init the input fields and copy the values of the fields into input_buffer 
-  init_input_field(&operacion[0], "Credito ", compra_descr[11].length , false, 39, 9, FLOAT);
-  init_input_field(&operacion[1], "Factura$", compra_descr[12].length, false, 39, 10, FLOAT);
-  init_input_field(&operacion[2], "Cheque", compra_descr[13].length, false, 4, 17, FLOAT); 
-  init_input_field(&operacion[3], "Efec.", compra_descr[14].length, false, 22, 17, FLOAT);
-  init_input_field(&operacion[4], "Cheque", compra_descr[15].length, false, 39, 17, FLOAT); 
-  init_input_field(&operacion[5], "Efectivo", compra_descr[16].length, false, 57, 17, FLOAT);
+  init_input_field(&operacion[0], "Acreedor", compra_descr[11].length , compra_descr[11].decimal , 39, 9, FLOAT);
+  init_input_field(&operacion[1], "Deudor  ", compra_descr[12].length, compra_descr[12].decimal, 39, 10, FLOAT);
+  init_input_field(&operacion[2], "Cheque", compra_descr[13].length, compra_descr[13].decimal, 4, 17, FLOAT); 
+  init_input_field(&operacion[3], "Efec.", compra_descr[14].length, compra_descr[14].decimal, 22, 17, FLOAT);
+  init_input_field(&operacion[4], "Cheque", compra_descr[15].length, compra_descr[15].decimal, 39, 17, FLOAT); 
+  init_input_field(&operacion[5], "Efectivo", compra_descr[16].length, compra_descr[16].decimal, 57, 17, FLOAT);
 
   get_data(buffer, indice, compra_descr[0].fieldname, compra_ptr, compra_head, compra_descr);
   mvprintw(2, 17, "%s", buffer);
@@ -3879,7 +4240,7 @@ void modCom(void)
     return;
   }
   
-  free(entrada[0].prompt);
+  free((void*)entrada[0].prompt);
   if (fclose(pro_ptr) != 0) 
   {
     mvprintw(0, 0, "Error al cerrar el archivo: %s", strerror(errno));
@@ -3938,7 +4299,14 @@ void consCli(void)
   
   init_input_field(&entrada[0], "CODIGO: ", 4, false, x + 4, y + 1, STRING);
   init_input_field(&entrada[1], "RAZON: ", 30, false, x+5, y+2, CAP);
-  input_fields_loop(entrada, entradas, NULL);
+  int cancel = input_fields_loop_unformatted(entrada, entradas, NULL);
+  if(cancel)
+  {
+    goto consCliCleanup;
+  }
+
+  if(isIdZero(entrada[0].input_buffer, entrada[0].max_length))
+    goto consCliCleanup;
 
   if(entrada[0].input_buffer[0] && !entrada[1].input_buffer[0]) 
   {
@@ -3959,6 +4327,8 @@ void consCli(void)
   }
   else
   {
+    if(currBuff == -1)
+      return;
     indice = get_incomplete_index(cliDescr[currBuff].fieldname, entrada[currBuff].input_buffer, cliPtr, cliHead, cliDescr);
     if(indice ==  -1)
     {
@@ -3988,8 +4358,10 @@ void consCli(void)
     getch();
     return;
   }
-  free(entrada[0].prompt);
-  free(entrada[1].prompt);
+
+consCliCleanup:
+  free((void*)entrada[0].prompt);
+  free((void*)entrada[1].prompt);
   menu_principal();
 
   return;
@@ -4047,10 +4419,10 @@ void deudores(void)
   int check;
   int index[255];
   size_t offsets[3] = {5, 20, 0};
-  SearchFields fields[] = 
+  SearchFields fields[] =
   {
-    {"NUMERO", 0}, {"RAZON", 0}, {"ACREEDOR", 0}, {"DEUDOR", 0}
-  }; 
+    {"NUMERO", 0}, {"RAZON", 0}, {"FEULTCOM", 0}, {"ACREEDOR", 0}, {"DEUDOR", 0}
+  };
   
   cliPtr = fopen("CLIPRO.dbf", "rb");
   if(cliPtr == NULL)
@@ -4067,7 +4439,7 @@ void deudores(void)
   //Pasos a seguir
   //Extraer ACREEDOR y DEUDOR != 0 
   offsets[2] = cliHead[0].record_bytes;
-  saldoOffset += cliDescr[0].length + 1 + cliDescr[1].length + 1 + cliDescr[16].length + 1 + cliDescr[17].length + 1;
+  saldoOffset += cliDescr[0].length + 1 + cliDescr[1].length + 1 + cliDescr[13].length + 3 + cliDescr[16].length + 1 + cliDescr[17].length + 1;
   
   nOfInd = extDeudores("CLIPRO.dbf", buffer, fields);
   for(int i = 0; i < 254; i++) 
@@ -4094,7 +4466,8 @@ void deudores(void)
     }
   }
   bSortStr(buffer, index, newNOfInd, offsets);
-  mvprintw(0, 0, "%s %30.5s %12.8s %12.5s %13.5s", "CODI", "RAZON" , "ACREEDOR", "DEUDOR", "SALDO");
+  clear();
+  mvprintw(0, 0, "%s|%30.5s|%10.10s|%12.8s|%12.5s|%13.5s|", "CODI", "RAZON" , "ULTIMA OP", "ACREEDOR", "DEUDOR", "SALDO");
   
   vScroller2(buffer, 0, 2, 28, newNOfInd, index, cliHead);
   
@@ -4104,7 +4477,7 @@ void deudores(void)
     getch();
     return;
   }
-  free(buffer);
+  free((void*)buffer);
   menu_principal();
   return;
 }
@@ -4144,12 +4517,11 @@ void sto_consulta(void)
   retrieveIndex(stoHead, "STOCK1_CODI.INDEX", codiIndex);
   retrieveIndex(stoHead, "STOCK1_PROD.INDEX", prodIndex);
 
-  draw_background_submenu(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 2, nOfDescr + 2);
-  recuadro(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 2, nOfDescr + 2);
-    
-  init_input_field(&entrada[0], "CODIGO: ", 4, false, x+4, y+1, STRING);
-  init_input_field(&entrada[1], "NOMBRE: ", 30, false, x+4, y+2, CAP);
-  input_fields_loop(entrada, entradas, NULL);
+  draw_background_submenu(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
+  recuadro(x, y, FIELD_NAME + STOCK_MAX_LENGTH + 3, nOfDescr + 2);
+  init_input_field(&entrada[0], "CODIGO: ", 4, false, x+5, y+1, STRING);
+  init_input_field(&entrada[1], "NOMBRE: ", 30, false, x+5, y+2, CAP);
+  input_fields_loop_unformatted(entrada, entradas, NULL);
 
   if(entrada[0].input_buffer[0] && !entrada[1].input_buffer[0]) 
   {
@@ -4162,10 +4534,14 @@ void sto_consulta(void)
     currBuff = 1;
   }
   
+  
+  if(entrada[0].input_buffer[0] == '0')
+    goto sto_consulta_cleanup;
+
   if(currIndex == NULL)
   {
     //this should be unreachable but just in case of failure I have this
-    pRecord("STOCK1.DBF", entrada[0].input_buffer, x+4, y+1);
+    pRecord("STOCK1.DBF", entrada[0].input_buffer, x+5, y+1);
   }
   else
   {
@@ -4187,7 +4563,7 @@ void sto_consulta(void)
     }
     while(indice >= 0)
     {
-      pRecordNew("STOCK1.DBF", currIndex[indice], x+4, y+1);
+      pRecordNew("STOCK1.DBF", currIndex[indice], x+5, y+1);
       indice = keyControlsHandler(indice);
     }
   }
@@ -4197,8 +4573,10 @@ void sto_consulta(void)
     getch();
     return;
   }
-  free(entrada[0].prompt);
-  free(entrada[1].prompt);
+
+sto_consulta_cleanup:
+  free((void*)entrada[0].prompt);
+  free((void*)entrada[1].prompt);
   menu_principal();
 
   return;
@@ -4251,7 +4629,7 @@ static void grupoStockPorCriterio(int fieldIndex)
   int nOfInd;
   int entradas = 1;
   int choice = printingMenu();
-  const int allocSize = 200; // Adjust if needed
+  enum { allocSize = 200 }; // Adjust if needed
   int index[allocSize];
   for(int i = 0; i < allocSize; i++)
   {
@@ -4277,14 +4655,14 @@ static void grupoStockPorCriterio(int fieldIndex)
   char *buffer = (char*)malloc(stoHead->record_bytes*allocSize * sizeof(char));
   if(stoDescr[fieldIndex].type == 'C')
   {
-    init_input_field(&entrada[0], stoDescr[fieldIndex].fieldname, stoDescr[fieldIndex].length, false, 20, 20, CAP);
+    init_input_field(&entrada[0], stoDescr[fieldIndex].fieldname, stoDescr[fieldIndex].length, false, 20, 20, STRING);
   }
   else if(stoDescr[fieldIndex].type == 'N')
   {
-    init_input_field(&entrada[0], stoDescr[fieldIndex].fieldname, stoDescr[fieldIndex].length, false, 20, 20, FLOAT);
+    init_input_field(&entrada[0], stoDescr[fieldIndex].fieldname, stoDescr[fieldIndex].length, stoDescr[fieldIndex].decimal, 20, 20, FLOAT);
   }
   memset(entrada[0].input_buffer, 0, 99);
-  input_fields_loop(entrada, entradas, NULL);
+  input_fields_loop_unformatted(entrada, entradas, NULL);
   if(entrada[0].input_buffer[0] == 0) return;
 	
   SearchFields campos[] = 
@@ -4330,7 +4708,7 @@ static void grupoStockPorCriterio(int fieldIndex)
 
   if(fclose(stoPtr) != 0)
   {
-    free(buffer);
+    free((void*)buffer);
     mvprintw(0,0, "error al cerrar el archivo");
     getch();
     return;
@@ -4344,7 +4722,7 @@ static void grupoStockPorCriterio(int fieldIndex)
       flushToFile(buffer, strlen(buffer), nOfInd);
       break;
   }
-  free(buffer);
+  free((void*)buffer);
   return;
 }
 
@@ -4378,7 +4756,7 @@ void modPro(void)
   recuadro(6, 4, FIELD_NAME + PRO_MAX_LENGTH + 2, nOfDescr + 2);
   
   int types[] = {INTEGER, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, CAP, FLOAT, FLOAT};
-  modReg("PROVE.dbf", types, 13, 5);
+  modReg("PROVE.dbf", types, 12, 5);
 	menprov();
   
   system("indexer PROVE.DBF PROVE_CODI.INDEX 1 4");
@@ -4422,9 +4800,12 @@ void consPro(void)
   draw_background_submenu(x, y, FIELD_NAME + PRO_MAX_LENGTH + 2, nOfDescr + 2);
   recuadro(x, y, FIELD_NAME + PRO_MAX_LENGTH + 2, nOfDescr + 2);
     
-  init_input_field(&entrada[0], "CODIGO: ", 4, false, x+4, y+1, STRING);
+  init_input_field(&entrada[0], "CODIGO: ", proDescr[0].length, false, x+4, y+1, STRING);
   init_input_field(&entrada[1], "RAZON: ", 30, false, x+5, y+2, CAP);
-  input_fields_loop(entrada, entradas, NULL);
+  input_fields_loop_unformatted(entrada, entradas, NULL);
+
+  if(isIdZero(entrada[0].input_buffer, entrada[0].max_length))
+    goto consProCleanup;
 
   if(entrada[0].input_buffer[0] && !entrada[1].input_buffer[0]) 
   {
@@ -4437,6 +4818,8 @@ void consPro(void)
     currIndex = razonIndex;
     currBuff = 1;
   }
+  else
+    goto consProCleanup;
 
   if(entrada[1].input_buffer[0] == 0)
   {
@@ -4473,8 +4856,10 @@ void consPro(void)
     getch();
     return;
   }
-  free(entrada[0].prompt);
-  free(entrada[1].prompt);
+
+consProCleanup:
+  free((void*)entrada[0].prompt);
+  free((void*)entrada[1].prompt);
 
 	menprov();
   return;
@@ -4503,7 +4888,6 @@ void acreedores(void)
   int newNOfInd = 0;
   int saldoOffset = 0;
   int k = 0;
-  int check;
   int index[255];
   size_t offsets[3] = {5, 20, 0};
   SearchFields fields[] = 
@@ -4528,7 +4912,7 @@ void acreedores(void)
   offsets[2] = proHead[0].record_bytes;
   saldoOffset += proDescr[0].length + 1 + proDescr[1].length + 1 + proDescr[12].length + 1 + proDescr[13].length + 1;
   
-  nOfInd = extDeudores("PROVE.DBF", buffer, fields);
+  nOfInd = extAcreedores("PROVE.DBF", buffer, fields);
 
   for(int i = 0; i < 254; i++) 
   {
@@ -4539,7 +4923,7 @@ void acreedores(void)
   rightAlign(zero, proDescr[12].length + 1);
   while(k < nOfInd)
   {
-    check = strncmp(zero, &buffer[k * offsets[2] + saldoOffset], proDescr[12].length);
+    int check = strncmp(zero, &buffer[k * offsets[2] + saldoOffset], proDescr[12].length);
     if(!check)
     {
       k++; 
@@ -4564,7 +4948,7 @@ void acreedores(void)
     getch();
     return;
   }
-  free(buffer);
+  free((void*)buffer);
   menprov();
   return;
 }
@@ -4615,7 +4999,6 @@ void consCheque(void)
   int entradas = 4;
 	const int x = 6;
 	const int y = 4;
-  int indice;
   
   chePtr = fopen("CHE_TERC.DBF", "rb");
   if(chePtr == NULL)
@@ -4649,8 +5032,8 @@ void consCheque(void)
   init_input_field(&entrada[0], "NUMERO: ", cheDescr[0].length, false, x + 4, y + 1, STRING);
   init_input_field(&entrada[1], "TITULAR: ", cheDescr[5].length, false, x + 3, y + 6, CAP);
   init_input_field(&entrada[2], "ENDOSATE: ", cheDescr[6].length, false, x + 2, y + 7, CAP);
-  init_input_field(&entrada[3], "IMPORTE: ", cheDescr[7].length, false, x + 3, y + 8, FLOAT);
-  input_fields_loop(entrada, entradas, NULL);
+  init_input_field(&entrada[3], "IMPORTE: ", cheDescr[7].length, cheDescr[7].decimal, x + 3, y + 8, FLOAT);
+  input_fields_loop_unformatted(entrada, entradas, NULL);
 
   if(entrada[0].input_buffer[0]) 
   {
@@ -4678,6 +5061,8 @@ void consCheque(void)
     currBuff = 3;
     currDescr = 7;
   }
+  else
+    goto consChequeCleanup;
 
   if(currIndex == NULL)
   {
@@ -4686,7 +5071,7 @@ void consCheque(void)
   }
   else
   {
-    indice = get_incomplete_index(cheDescr[currDescr].fieldname, entrada[currBuff].input_buffer, chePtr, cheHead, cheDescr);
+    int indice = get_incomplete_index(cheDescr[currDescr].fieldname, entrada[currBuff].input_buffer, chePtr, cheHead, cheDescr);
     if(indice ==  -1)
     {
       mvprintw(0, 0, "Registro no encontrado, error: %d ", indice);
@@ -4715,8 +5100,10 @@ void consCheque(void)
     getch();
     return;
   }
-  free(entrada[0].prompt);
-  free(entrada[1].prompt);
+
+consChequeCleanup:
+  free((void*)entrada[0].prompt);
+  free((void*)entrada[1].prompt);
   menu_principal();
 
   return;
@@ -4768,10 +5155,104 @@ void chequesNoEntregados(void)
   
   vScroller(testBuffer, 0, 2, 19, nOfInd, index);
   
-  free(testBuffer);
+  free((void*)testBuffer);
   
   if(fclose(fPtr) != 0)
     {
+    mvprintw(0, 0, "No se pudo cerrar");
+    return;
+  }
+  menu_principal();
+  return;  
+}
+
+void chequesEnFecha(void)
+{
+  FILE* fPtr = NULL;
+  descriptor ch_descr[25];
+  header ch_head[1];  
+  int checkMonth, checkDay, j;
+
+  fPtr = fopen("CHE_TERC.dbf", "rb");
+  if(fPtr == NULL)
+  {
+    mvprintw(0, 0, "No se pudo abrir");
+    return;
+  }
+  int nOfInd;
+  int index[200];
+  for(int i = 0; i < 200; i++)
+  {
+    index[i] = i;
+  }
+  store_header_data(ch_head, fPtr, 0);
+  store_descriptor_data(ch_descr, fPtr);
+  SearchFields campos[] = 
+  {
+    {"NUMERO", 0}, 
+    {"FECHA_COB", YEAR_ON}, 
+    {"TITULAR", 0}, 
+    {"ENDOSANTE", 0}, 
+    {"IMPORTE", 0}};
+  
+  
+  SearchConfig config[1] = 
+	{
+    INIT_SEARCH_CONFIG(
+                        .fName = "CHE_TERC.dbf", 
+												.nOfFields = 5, 
+												.fields = campos, 
+												.fieldName = "FECHA_ENT", 
+												.extraSpace = 0
+		                  )
+	};
+ 
+  char *testBuffer = (char*)malloc(ch_head->record_bytes*200 * sizeof(char));
+
+  nOfInd = extCoinFields(config, testBuffer, "        ");
+  
+  int len = strlen(testBuffer) + 1;
+
+
+  char today[11];
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+  strftime(today, 9, "%d%m%Y", &tm);
+  int newNOfInd = 0; 
+
+
+j = 0;
+  for(int i = 0; i < nOfInd; i++)
+  {
+    checkMonth = strncmp((const char *)&testBuffer[index[i] * len + 8], &today[2],2);
+    checkDay = strncmp((const char *)&testBuffer[index[i] * len + 5], &today[0],2);
+    if(checkMonth < 0)
+    {
+      index[j] = index[i];
+      j++;
+      newNOfInd++;
+
+    }
+    else
+    {
+      if(checkMonth == 0)
+      {
+        if(checkDay <= 0)
+        {
+          index[j] = index[i];
+          j++;
+          newNOfInd++;
+        }
+      }
+    }
+  }
+
+  vScroller(testBuffer, 0, 2, 19, newNOfInd, index);
+  
+  free((void*)testBuffer);
+  
+  if(fclose(fPtr) != 0)
+  {
     mvprintw(0, 0, "No se pudo cerrar");
     return;
   }
@@ -4875,7 +5356,7 @@ void funcTest(void)
   mvprintw(0, 0, "%d              ", nOfInd);
   vScroller(testBuffer, 0, 2, 19, nOfInd, index);
   
-  free(testBuffer);
+  free((void*)testBuffer);
   
   if(fclose(fPtr) != 0)
   {

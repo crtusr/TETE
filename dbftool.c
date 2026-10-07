@@ -63,42 +63,6 @@ int setDeleted(int recNo, DBFile *file, char del)
 
 //All formatting functions should be at the top of the file
 
-void spaceFill(char *string, size_t size)
-{
-  for (int i = 0; i < size; i++)
-  {
-    if(string[i] == '\0')
-    {
-      string[i] = ' ';
-    }
-  }
-  return;
-}
-
-void rightAlign(char *string, const size_t size)
-{
-  //determine amount of spaces to the right
-  int counter = 0;
-  int check = 0;
-
-  for(int i = 0; i < size; i++)
-  { 
-    if(check == 0 && (string[i] != '\0' && string[i] != ' ')) check = 1;
-    if((string[i] == '\0' || string[i] == ' ') && check == 1) counter++;
-    if(string[i] == '\0') string[i] = ' ';
-  }
-  if(counter > 0)
-  {
-    memmove(&string[counter], string, size - counter);
-
-    for(int i = 0; i < counter; i++)
-    {
-      string[i] = ' ';
-    }
-  }
-  return;
-}
-
 int addDecimals(char *string, const size_t size, const size_t decimals)
 {
   /* As of right now there is one edge case which should be addressed:
@@ -1628,6 +1592,16 @@ packErr:
   return retVal;
 }
 
+size_t findField(char* fieldName, descriptor* descr, size_t nOfDescr)
+{
+  int check;
+  for(size_t i = 0; i < nOfDescr; i++)
+  {
+    check = !strncmp(fieldName, descr[i].fieldname, strnlen(fieldName, 11));
+    if(check) return i;
+  }
+  return NOT_FOUND;
+}
 // This is risky but i will make a function to memoize the whole file
 
 void extractAll(FILE* fPtr, header* head, descriptor* descr, char* record)

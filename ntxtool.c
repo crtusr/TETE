@@ -8,16 +8,6 @@
 #include"ntxtool.h"
 #include"dbftool.h"
 
-static size_t findField(char* fieldName, descriptor* descr, size_t nOfDescr)
-{
-  int check;
-  for(size_t i = 0; i < nOfDescr; i++)
-  {
-    check = !strncmp(fieldName, descr[i].fieldname, strnlen(fieldName, 11));
-    if(check) return i;
-  }
-  return NOT_FOUND;
-}
 
 static uint16_t calculateMaxPageEntries(uint16_t keySize)
 {
